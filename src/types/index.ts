@@ -51,6 +51,7 @@ export interface TeamProgress {
 }
 
 export interface CollectiveProgress {
+    [key: string]: number;
   pesquisa: number;
   produto: number;
   design: number;
