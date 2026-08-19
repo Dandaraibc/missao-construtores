@@ -1,0 +1,325 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  STUDENT
+  TEACHER
+  UBONGO_ADMIN
+  SUPER_ADMIN
+}
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+enum MissionStatus {
+  LOCKED
+  AVAILABLE
+  IN_PROGRESS
+  SUBMITTED
+  REVIEW
+  APPROVED
+  REVISION_REQUIRED
+  COMPLETED
+  OVERDUE
+}
+enum SubmissionStatus {
+  DRAFT
+  SUBMITTED
+  REVIEW
+  APPROVED
+  REVISION_REQUIRED
+}
+enum MissionEventType {
+  PLAYER_ENTER_ZONE
+  PLAYER_INTERACT
+  NPC_DIALOGUE_FINISHED
+  ITEM_COLLECTED
+  OBJECT_INSPECTED
+  PUZZLE_COMPLETED
+  CHOICE_MADE
+  TEAM_DECISION_CONFIRMED
+  OBJECTIVE_COMPLETED
+  MISSION_COMPLETED
+}
+
+model User {
+  id String @id @default(cuid())
+  username String @unique
+  displayName String
+  shortName String?
+  passwordHash String
+  role UserRole @default(STUDENT)
+  status UserStatus @default(ACTIVE)
+  teamId String?
+  team Team? @relation(fields: [teamId], references: [id])
+  profile Profile?
+  sessions Session[]
+  submissions MissionSubmission[]
+  events MissionEvent[]
+  auditLogs AuditLog[] @relation("AuditActor")
+  notifications Notification[]
+  meetingsCreated Meeting[] @relation("MeetingCreator")
+  meetingParticipants MeetingParticipant[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lastSeenAt DateTime?
+}
+
+model Profile {
+  id String @id @default(cuid())
+  userId String @unique
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skinTone String @default("medium")
+  hair String @default("straight-short")
+  hairColor String @default("#201813")
+  face String @default("default")
+  shirt String @default("uniform")
+  pants String @default("default")
+  shoes String @default("default")
+  accessory String @default("none")
+  avatarData Json?
+  updatedAt DateTime @updatedAt
+}
+
+model Session {
+  id String @id @default(cuid())
+  tokenHash String @unique
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  lastUsedAt DateTime @default(now())
+}
+
+model Team {
+  id String @id @default(cuid())
+  slug String @unique
+  name String
+  description String?
+  color String
+  icon String
+  users User[]
+  missions Mission[]
+  seats Seat[]
+  createdAt DateTime @default(now())
+}
+
+model Seat {
+  id String @id @default(cuid())
+  teamId String
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  label String
+  mapId String
+  x Int
+  y Int
+  userId String? @unique
+  createdAt DateTime @default(now())
+}
+
+model Map {
+  id String @id @default(cuid())
+  slug String @unique
+  name String
+  tilemap String
+  rooms Room[]
+  acousticZones AcousticZone[]
+  createdAt DateTime @default(now())
+}
+
+model Room {
+  id String @id @default(cuid())
+  mapId String
+  map Map @relation(fields: [mapId], references: [id], onDelete: Cascade)
+  slug String
+  name String
+  type String
+  metadata Json?
+  meetings Meeting[]
+  acousticZones AcousticZone[]
+  createdAt DateTime @default(now())
+  @@unique([mapId, slug])
+}
+
+enum MeetingStatus {
+  SCHEDULED
+  OPEN
+  IN_PROGRESS
+  FINISHED
+  CANCELLED
+}
+enum SeatStatus {
+  FREE
+  OCCUPIED
+  RESERVED
+}
+enum AudioMode {
+  PROXIMITY
+  ROOM
+  PRIVATE_ROOM
+  DISABLED
+}
+
+model Meeting {
+  id String @id @default(cuid())
+  title String
+  description String?
+  provider String?
+  meetingUrl String?
+  roomId String
+  room Room @relation(fields: [roomId], references: [id])
+  createdBy String
+  creator User @relation("MeetingCreator", fields: [createdBy], references: [id])
+  teamId String?
+  missionId String?
+  startAt DateTime
+  endAt DateTime
+  status MeetingStatus @default(SCHEDULED)
+  isClosed Boolean @default(false)
+  videoEnabled Boolean @default(false)
+  agenda String?
+  notes Json?
+  participants MeetingParticipant[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([roomId, startAt, endAt])
+}
+
+model MeetingParticipant {
+  meetingId String
+  userId String
+  meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt DateTime?
+  leftAt DateTime?
+  @@id([meetingId, userId])
+}
+
+model AcousticZone {
+  id String @id @default(cuid())
+  mapId String
+  roomId String?
+  map Map @relation(fields: [mapId], references: [id], onDelete: Cascade)
+  room Room? @relation(fields: [roomId], references: [id])
+  mode AudioMode @default(PROXIMITY)
+  radius Float @default(5)
+  closed Boolean @default(false)
+  metadata Json?
+}
+
+model Mission {
+  id String @id
+  teamId String
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  title String
+  description String
+  context String?
+  challenge String?
+  examples Json?
+  mapId String?
+  spawnPoint Json?
+  definition Json
+  order Int @default(0)
+  status MissionStatus @default(LOCKED)
+  xp Int @default(0)
+  achievement String?
+  startsAt DateTime?
+  deadlineAt DateTime?
+  dependencies MissionDependency[] @relation("MissionDependencies")
+  dependents MissionDependency[] @relation("MissionDependents")
+  submissions MissionSubmission[]
+  events MissionEvent[]
+  versions MissionVersion[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([teamId, order])
+  @@index([deadlineAt])
+}
+
+model MissionDependency {
+  missionId String
+  dependsOnId String
+  mission Mission @relation("MissionDependencies", fields: [missionId], references: [id], onDelete: Cascade)
+  dependsOn Mission @relation("MissionDependents", fields: [dependsOnId], references: [id], onDelete: Cascade)
+  @@id([missionId, dependsOnId])
+}
+
+model MissionSubmission {
+  id String @id @default(cuid())
+  missionId String
+  mission Mission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  submittedBy String
+  user User @relation(fields: [submittedBy], references: [id])
+  teamId String
+  content Json
+  version Int @default(1)
+  status SubmissionStatus @default(DRAFT)
+  submittedAt DateTime?
+  reviewedAt DateTime?
+  reviewedBy String?
+  reviewNote String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([missionId, status])
+}
+
+model MissionVersion {
+  id String @id @default(cuid())
+  missionId String
+  mission Mission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  version Int
+  content Json
+  reason String?
+  createdBy String
+  createdAt DateTime @default(now())
+  @@unique([missionId, version])
+}
+
+model MissionEvent {
+  id String @id @default(cuid())
+  missionId String
+  mission Mission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  userId String
+  user User @relation(fields: [userId], references: [id])
+  type MissionEventType
+  payload Json?
+  createdAt DateTime @default(now())
+  @@index([missionId, createdAt])
+}
+
+model ProjectSetting {
+  id String @id @default(cuid())
+  projectName String
+  startsAt DateTime
+  projectDeadline DateTime
+  timezone String @default("America/Sao_Paulo")
+  updatedBy String?
+  updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title String
+  body String
+  readAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([userId, readAt])
+}
+
+model AuditLog {
+  id String @id @default(cuid())
+  actorId String?
+  actor User? @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  action String
+  entityType String
+  entityId String?
+  payload Json?
+  createdAt DateTime @default(now())
+  @@index([entityType, entityId])
+}

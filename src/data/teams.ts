@@ -4,7 +4,7 @@ export const teams: Team[] = [
   {
     slug: "pesquisa",
     name: "Pesquisa e Conteúdo",
-    shortName: "Pesquisa",
+    shortName: "Descobertas",
     color: "#059669", // emerald
     bgColor: "bg-emerald-500",
     icon: "🔬",
@@ -218,7 +218,7 @@ export const teams: Team[] = [
   {
     slug: "produto",
     name: "Produto e Experiência",
-    shortName: "Produto",
+    shortName: "Ideias",
     color: "#2563eb", // blue
     bgColor: "bg-blue-500",
     icon: "🗺️",
@@ -485,7 +485,7 @@ export const teams: Team[] = [
   {
     slug: "design",
     name: "Design e Identidade Visual",
-    shortName: "Design",
+    shortName: "Criativa",
     color: "#7c3aed", // violet
     bgColor: "bg-violet-500",
     icon: "🎨",
@@ -740,7 +740,7 @@ export const teams: Team[] = [
   {
     slug: "testes",
     name: "Testes e Qualidade",
-    shortName: "Testes",
+    shortName: "Guardiões",
     color: "#dc2626", // red
     bgColor: "bg-red-500",
     icon: "🐞",
@@ -937,7 +937,7 @@ export const teams: Team[] = [
   {
     slug: "comunicacao",
     name: "Comunicação e Apresentação",
-    shortName: "Comunicação",
+    shortName: "História",
     color: "#ea580c", // orange
     bgColor: "bg-orange-500",
     icon: "📢",
