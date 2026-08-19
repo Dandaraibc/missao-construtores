@@ -26,10 +26,10 @@ export default function EquipePage() {
 
   if (!team) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-marfim text-carvao">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Equipe não encontrada</h1>
-          <Link href="/" className="text-emerald-400 hover:underline">
+          <Link href="/" className="text-verde-escuro hover:underline">
             Voltar ao início
           </Link>
         </div>
@@ -89,16 +89,16 @@ export default function EquipePage() {
   // Mission detail view
   if (activeMission) {
     return (
-      <div className="min-h-screen bg-slate-950">
-        <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-40">
+      <div className="min-h-screen bg-marfim text-carvao">
+        <header className="border-b border-argila bg-marfim/80 backdrop-blur sticky top-0 z-40">
           <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
             <button
               onClick={handleCloseMission}
-              className="text-slate-400 hover:text-white flex items-center gap-2 text-sm"
+              className="text-carvao/60 hover:text-verde-escuro flex items-center gap-2 text-sm transition-colors"
             >
               ← Voltar
             </button>
-            <div className="text-sm font-medium" style={{ color: team.color }}>
+            <div className="text-sm font-bold text-verde-escuro flex items-center gap-1">
               {team.icon} {team.shortName}
             </div>
           </div>
@@ -106,24 +106,23 @@ export default function EquipePage() {
 
         <main className="max-w-3xl mx-auto px-4 py-8">
           {showSuccess ? (
-            <div className="text-center py-16">
+            <div className="text-center py-16 bg-mint border border-argila rounded-2xl">
               <div className="text-6xl mb-6">🎉</div>
               <h2 className="text-3xl font-bold mb-2">Missão concluída!</h2>
-              <p className="text-slate-400 mb-2">
+              <p className="text-verde-escuro font-bold mb-2">
                 +{activeMission.xpReward} XP
               </p>
               {activeMission.badge && (
-                <p className="text-amber-400 font-medium mb-6">
+                <p className="text-verde-escuro font-bold mb-6">
                   Badge desbloqueada: {activeMission.badge}
                 </p>
               )}
-              <p className="text-slate-300 mb-8 max-w-md mx-auto">
+              <p className="text-carvao/80 mb-8 max-w-md mx-auto">
                 A entrega <strong>{activeMission.deliveryLabel}</strong> foi registrada e será usada no aplicativo final.
               </p>
               <button
                 onClick={handleCloseMission}
-                className="px-6 py-3 rounded-xl font-semibold text-white"
-                style={{ backgroundColor: team.color }}
+                className="px-6 py-3 rounded-xl font-semibold text-marfim bg-verde-escuro hover:bg-carvao transition-colors"
               >
                 Continuar
               </button>
@@ -131,36 +130,36 @@ export default function EquipePage() {
           ) : (
             <>
               <div className="mb-8">
-                <div className="text-sm font-mono text-slate-500 mb-2">
+                <div className="text-sm font-bold text-verde-escuro mb-2">
                   MISSÃO {activeMission.number}
                 </div>
                 <h1 className="text-3xl font-bold mb-3">{activeMission.title}</h1>
-                <p className="text-slate-400">{activeMission.description}</p>
+                <p className="text-carvao/70">{activeMission.description}</p>
               </div>
 
               {/* Context */}
-              <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-5 mb-6">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+              <div className="bg-mint border border-argila rounded-xl p-5 mb-6">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-verde-escuro mb-2">
                   Contexto
                 </h3>
-                <p className="text-slate-200">{activeMission.context}</p>
+                <p className="text-carvao">{activeMission.context}</p>
               </div>
 
               {/* Challenge */}
-              <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-5 mb-8">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+              <div className="bg-mint border border-argila rounded-xl p-5 mb-8">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-verde-escuro mb-2">
                   Desafio
                 </h3>
-                <p className="text-slate-200">{activeMission.challenge}</p>
+                <p className="text-carvao">{activeMission.challenge}</p>
               </div>
 
               {/* Form fields */}
               <div className="space-y-6 mb-10">
                 {activeMission.fields.map((field) => (
                   <div key={field.id}>
-                    <label className="block text-sm font-medium mb-2">
+                    <label className="block text-sm font-semibold mb-2">
                       {field.label}
-                      {field.required && <span className="text-red-400 ml-1">*</span>}
+                      {field.required && <span className="text-verde-escuro ml-1">*</span>}
                     </label>
 
                     {field.type === "text" && (
@@ -169,7 +168,7 @@ export default function EquipePage() {
                         value={answers[field.id] || ""}
                         onChange={(e) => handleFieldChange(field.id, e.target.value)}
                         placeholder={field.placeholder}
-                        className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                        className="w-full bg-marfim border border-argila rounded-xl px-4 py-3 text-carvao placeholder-carvao/40 focus:outline-none focus:ring-2 focus:ring-verde-escuro/50 focus:border-verde-escuro transition-colors"
                       />
                     )}
 
@@ -179,7 +178,7 @@ export default function EquipePage() {
                         onChange={(e) => handleFieldChange(field.id, e.target.value)}
                         placeholder={field.placeholder}
                         rows={4}
-                        className="w-full bg-slate-800 border border-slate-600 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 resize-y"
+                        className="w-full bg-marfim border border-argila rounded-xl px-4 py-3 text-carvao placeholder-carvao/40 focus:outline-none focus:ring-2 focus:ring-verde-escuro/50 focus:border-verde-escuro resize-y transition-colors"
                       />
                     )}
 
@@ -188,16 +187,16 @@ export default function EquipePage() {
                         {field.options.map((opt) => (
                           <label
                             key={opt}
-                            className="flex items-center gap-3 p-3 rounded-xl bg-slate-800 border border-slate-700 cursor-pointer hover:border-slate-500 transition-colors"
+                            className="flex items-center gap-3 p-3 rounded-xl bg-marfim border border-argila cursor-pointer hover:border-verde-escuro/50 transition-colors"
                           >
                             <input
                               type="radio"
                               name={field.id}
                               checked={answers[field.id] === opt}
                               onChange={() => handleFieldChange(field.id, opt)}
-                              className="w-4 h-4"
+                              className="w-4 h-4 text-verde-escuro focus:ring-verde-escuro border-argila"
                             />
-                            <span className="text-sm">{opt}</span>
+                            <span className="text-sm font-medium">{opt}</span>
                           </label>
                         ))}
                       </div>
@@ -211,7 +210,7 @@ export default function EquipePage() {
                           return (
                             <label
                               key={opt}
-                              className="flex items-center gap-3 p-3 rounded-xl bg-slate-800 border border-slate-700 cursor-pointer hover:border-slate-500 transition-colors"
+                              className="flex items-center gap-3 p-3 rounded-xl bg-marfim border border-argila cursor-pointer hover:border-verde-escuro/50 transition-colors"
                             >
                               <input
                                 type="checkbox"
@@ -226,9 +225,9 @@ export default function EquipePage() {
                                     handleFieldChange(field.id, [...current, opt]);
                                   }
                                 }}
-                                className="w-4 h-4"
+                                className="w-4 h-4 rounded text-verde-escuro focus:ring-verde-escuro border-argila"
                               />
-                              <span className="text-sm">{opt}</span>
+                              <span className="text-sm font-medium">{opt}</span>
                             </label>
                           );
                         })}
@@ -236,22 +235,21 @@ export default function EquipePage() {
                     )}
 
                     {field.help && (
-                      <p className="text-xs text-slate-500 mt-1">{field.help}</p>
+                      <p className="text-xs text-carvao/60 mt-1 font-medium">{field.help}</p>
                     )}
                   </div>
                 ))}
               </div>
 
               {/* Submit */}
-              <div className="sticky bottom-0 bg-slate-950/90 backdrop-blur border-t border-slate-800 py-4 -mx-4 px-4">
+              <div className="sticky bottom-0 bg-marfim/90 backdrop-blur border-t border-argila py-4 -mx-4 px-4">
                 <button
                   onClick={handleSubmit}
-                  className="w-full py-4 rounded-xl font-bold text-white text-lg transition-transform active:scale-[0.98]"
-                  style={{ backgroundColor: team.color }}
+                  className="w-full py-4 rounded-xl font-bold text-marfim text-lg bg-verde-escuro hover:bg-carvao transition-all active:scale-[0.98]"
                 >
                   Enviar entrega · +{activeMission.xpReward} XP
                 </button>
-                <p className="text-center text-xs text-slate-500 mt-2">
+                <p className="text-center text-xs text-carvao/60 mt-2 font-medium">
                   Entrega: {activeMission.deliveryLabel}
                 </p>
               </div>
@@ -264,57 +262,56 @@ export default function EquipePage() {
 
   // Team dashboard
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
-      <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-40">
+    <div className="min-h-screen bg-marfim text-carvao">
+      <header className="border-b border-argila bg-marfim/80 backdrop-blur sticky top-0 z-40">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="text-slate-400 hover:text-white text-sm flex items-center gap-1">
+          <Link href="/" className="text-carvao/60 hover:text-verde-escuro text-sm flex items-center gap-1 font-medium transition-colors">
             ← Todas as equipes
           </Link>
           <div className="flex items-center gap-2">
             <span className="text-2xl">{team.icon}</span>
-            <span className="font-bold">{team.shortName}</span>
+            <span className="font-bold text-verde-escuro">{team.shortName}</span>
           </div>
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8">
         {/* Team header */}
-        <div className="mb-10">
+        <div className="mb-10 bg-mint border border-argila rounded-2xl p-8">
           <div
-            className="inline-block px-3 py-1 rounded-full text-xs font-semibold mb-4"
-            style={{ backgroundColor: `${team.color}22`, color: team.color }}
+            className="inline-block px-3 py-1 rounded-full text-xs font-bold mb-4 bg-verde-escuro/10 text-verde-escuro border border-verde-escuro/20"
           >
             Sua equipe
           </div>
           <h1 className="text-3xl font-bold mb-2">{team.name}</h1>
-          <p className="text-slate-400 text-lg mb-6">{team.mission}</p>
+          <p className="text-carvao/70 text-lg mb-6">{team.mission}</p>
 
           {/* Stats */}
           <div className="flex flex-wrap gap-4">
-            <div className="bg-slate-800/60 border border-slate-700 rounded-xl px-5 py-3">
-              <div className="text-2xl font-bold" style={{ color: team.color }}>
+            <div className="bg-marfim border border-argila rounded-xl px-5 py-3">
+              <div className="text-2xl font-bold text-verde-escuro">
                 {progress?.xp || 0}
               </div>
-              <div className="text-xs text-slate-400">XP</div>
+              <div className="text-xs font-semibold text-carvao/60">XP</div>
             </div>
-            <div className="bg-slate-800/60 border border-slate-700 rounded-xl px-5 py-3">
-              <div className="text-2xl font-bold text-white">
+            <div className="bg-marfim border border-argila rounded-xl px-5 py-3">
+              <div className="text-2xl font-bold text-carvao">
                 {progress?.completedMissions.length || 0}/{team.missions.length}
               </div>
-              <div className="text-xs text-slate-400">Missões</div>
+              <div className="text-xs font-semibold text-carvao/60">Missões</div>
             </div>
-            <div className="bg-slate-800/60 border border-slate-700 rounded-xl px-5 py-3">
-              <div className="text-2xl font-bold text-amber-400">
+            <div className="bg-marfim border border-argila rounded-xl px-5 py-3">
+              <div className="text-2xl font-bold text-verde-escuro">
                 {progress?.badges.length || 0}
               </div>
-              <div className="text-xs text-slate-400">Badges</div>
+              <div className="text-xs font-semibold text-carvao/60">Badges</div>
             </div>
           </div>
         </div>
 
         {/* Missions list */}
         <div>
-          <h2 className="text-lg font-bold mb-4">Missões</h2>
+          <h2 className="text-xl font-bold mb-4 text-carvao">Missões</h2>
           <div className="space-y-3">
             {team.missions.map((mission, index) => {
               const unlocked = isMissionUnlocked(mission, index);
@@ -327,36 +324,36 @@ export default function EquipePage() {
                   onClick={() => unlocked && handleStartMission(mission)}
                   className={`w-full text-left p-5 rounded-2xl border transition-all ${
                     completed
-                      ? "bg-slate-800/40 border-emerald-500/40"
+                      ? "bg-mint border-verde-escuro/40 hover:border-verde-escuro"
                       : unlocked
-                      ? "bg-slate-800/60 border-slate-600 hover:border-slate-400 cursor-pointer"
-                      : "bg-slate-900/40 border-slate-800 opacity-50 cursor-not-allowed"
+                      ? "bg-marfim border-argila hover:border-verde-escuro/50 hover:shadow-sm cursor-pointer"
+                      : "bg-marfim/50 border-argila opacity-50 cursor-not-allowed"
                   }`}
                 >
                   <div className="flex items-start gap-4">
                     <div
                       className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm shrink-0 ${
                         completed
-                          ? "bg-emerald-500 text-white"
+                          ? "bg-verde-escuro text-marfim"
                           : unlocked
-                          ? "bg-slate-700 text-white"
-                          : "bg-slate-800 text-slate-500"
+                          ? "bg-argila text-verde-escuro"
+                          : "bg-argila text-carvao/30"
                       }`}
                     >
                       {completed ? "✓" : unlocked ? mission.number : "🔒"}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold">{mission.title}</h3>
+                        <h3 className="font-bold text-carvao">{mission.title}</h3>
                         {completed && (
-                          <span className="text-xs text-emerald-400 font-medium">Concluída</span>
+                          <span className="text-xs text-verde-escuro font-bold">Concluída</span>
                         )}
                       </div>
-                      <p className="text-sm text-slate-400 line-clamp-1">
+                      <p className="text-sm text-carvao/70 line-clamp-1">
                         {mission.description}
                       </p>
                       {unlocked && !completed && (
-                        <p className="text-xs mt-2 font-medium" style={{ color: team.color }}>
+                        <p className="text-xs mt-2 font-bold text-verde-escuro">
                           +{mission.xpReward} XP · {mission.deliveryLabel}
                         </p>
                       )}
@@ -371,12 +368,12 @@ export default function EquipePage() {
         {/* Badges */}
         {progress && progress.badges.length > 0 && (
           <div className="mt-10">
-            <h2 className="text-lg font-bold mb-4">Badges conquistadas</h2>
+            <h2 className="text-xl font-bold mb-4 text-carvao">Badges conquistadas</h2>
             <div className="flex flex-wrap gap-3">
               {progress.badges.map((badge) => (
                 <div
                   key={badge}
-                  className="px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-sm font-medium"
+                  className="px-4 py-2 rounded-full bg-verde-escuro/10 border border-verde-escuro/20 text-verde-escuro text-sm font-bold shadow-sm"
                 >
                   🏅 {badge}
                 </div>
