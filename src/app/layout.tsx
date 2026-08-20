@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Missão Construtores | Ubongo",
-  description: "Plataforma gamificada para os alunos construírem o aplicativo Missão Carbono Zero",
+  title: "Missão Construtores · Ubongo Virtual Office",
+  description: "Plataforma gamificada imersiva 2D para a Feira de Ciências Carbono Zero",
 };
 
 export default function RootLayout({
@@ -23,8 +23,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-[#FAF7F2] text-[#1C1C1C]">
+    <html lang="pt-BR" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}>
+      <body className="min-h-full flex flex-col bg-[#0b0f17] text-white selection:bg-[#10b981] selection:text-black">
         {children}
       </body>
     </html>

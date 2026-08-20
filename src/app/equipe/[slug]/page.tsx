@@ -25,11 +25,11 @@ export default function EquipePage() {
 
   if (!team) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FAF7F2]">
-        <div className="text-center">
-          <h1 className="text-2xl font-semibold mb-4 text-[#1C1C1C]">Portal não encontrado</h1>
-          <Link href="/mapa" className="text-[#315F4C] hover:underline">
-            Voltar ao mapa
+      <div className="min-h-screen flex items-center justify-center bg-[#0b0f17] text-white">
+        <div className="text-center p-8 rounded-3xl border border-white/10 bg-[#111827] shadow-2xl">
+          <h1 className="text-2xl font-bold mb-4">Portal de Equipe Não Encontrado</h1>
+          <Link href="/campus" className="inline-block px-6 py-2.5 rounded-xl bg-[#10b981] font-bold text-black hover:bg-[#34d399] transition-all">
+            ← Voltar ao Campus Virtual
           </Link>
         </div>
       </div>
@@ -71,7 +71,7 @@ export default function EquipePage() {
         (Array.isArray(val) && val.length === 0) ||
         (typeof val === "string" && !val.trim())
       ) {
-        alert(`Por favor, preencha: ${field.label}`);
+        alert(`Por favor, preencha o campo obrigatório: ${field.label}`);
         return;
       }
     }
@@ -92,89 +92,90 @@ export default function EquipePage() {
     setShowSuccess(false);
   };
 
-  // ========== MISSION DETAIL ==========
+  // ========== ACTIVE MISSION DETAIL VIEW ==========
   if (activeMission) {
     return (
-      <div className="min-h-screen bg-[#FAF7F2]">
-        <header className="border-b border-[#EDE7DC] bg-white/90 backdrop-blur sticky top-0 z-40">
-          <div className="max-w-3xl mx-auto px-5 py-4 flex items-center justify-between">
+      <div className="min-h-screen bg-[#0b0f17] text-white">
+        <header className="border-b border-white/10 bg-[#111827]/90 backdrop-blur-md sticky top-0 z-40">
+          <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
             <button
               onClick={handleCloseMission}
-              className="text-[#1C1C1C]/50 hover:text-[#1C1C1C] flex items-center gap-2 text-sm"
+              className="text-xs font-bold text-white/60 hover:text-white flex items-center gap-2 transition-all"
             >
-              ← Voltar às quests
+              ← Voltar para as Quests da Equipe
             </button>
-            <div className="text-sm font-medium text-[#315F4C]">
-              {team.icon} {team.shortName}
+            <div className="flex items-center gap-2 text-xs font-extrabold text-[#10b981] bg-[#10b981]/10 px-3 py-1.5 rounded-full border border-[#10b981]/30">
+              <span>{team.icon}</span>
+              <span>{team.shortName}</span>
             </div>
           </div>
         </header>
 
-        <main className="max-w-3xl mx-auto px-5 py-8">
+        <main className="max-w-3xl mx-auto px-6 py-8">
           {showSuccess ? (
-            <div className="text-center py-16">
-              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-[#E8F6F0] flex items-center justify-center text-4xl">
+            <div className="text-center py-16 space-y-6 rounded-3xl border border-[#10b981]/30 bg-[#111827] p-8 shadow-2xl">
+              <div className="w-20 h-20 mx-auto rounded-full bg-[#10b981]/20 border-2 border-[#10b981] flex items-center justify-center text-4xl text-[#10b981] animate-bounce">
                 ✓
               </div>
-              <h2 className="text-3xl font-semibold text-[#1C1C1C] mb-2">Quest concluída!</h2>
-              <p className="text-[#315F4C] font-medium mb-1">
-                +{activeMission.xpReward} XP
-              </p>
+              <h2 className="text-3xl font-extrabold text-white">Quest Concluída com Sucesso!</h2>
+              <div className="inline-block px-4 py-2 rounded-xl bg-amber-500/20 border border-amber-400/40 text-amber-300 font-extrabold text-base">
+                +{activeMission.xpReward} XP Recompensados
+              </div>
               {activeMission.badge && (
-                <p className="text-[#1C1C1C]/60 mb-6">
-                  Relíquia: <span className="font-medium text-[#315F4C]">{activeMission.badge}</span>
+                <p className="text-sm text-white/70">
+                  Relíquia de Conquista: <span className="font-bold text-[#10b981]">{activeMission.badge}</span>
                 </p>
               )}
-              <p className="text-[#1C1C1C]/55 mb-8 max-w-md mx-auto">
-                Entrega registrada: <strong>{activeMission.deliveryLabel}</strong>
+              <p className="text-xs text-white/50 max-w-md mx-auto">
+                Sua entrega de <strong className="text-white">{activeMission.deliveryLabel}</strong> foi gravada e sincronizada no campus!
               </p>
-              <div className="flex gap-3 justify-center">
+              <div className="flex gap-3 justify-center pt-4">
                 <button
                   onClick={handleCloseMission}
-                  className="px-6 py-3 rounded-xl font-medium text-white bg-[#315F4C] hover:bg-[#2a5240]"
+                  className="px-6 py-3 rounded-xl font-extrabold text-black bg-[#10b981] hover:bg-[#34d399] transition-all shadow-lg text-xs"
                 >
-                  Próximas quests
+                  Próximas Quests ➔
                 </button>
                 <button
-                  onClick={() => router.push("/mapa")}
-                  className="px-6 py-3 rounded-xl font-medium border border-[#EDE7DC] text-[#1C1C1C]"
+                  onClick={() => router.push("/campus")}
+                  className="px-6 py-3 rounded-xl font-bold border border-white/20 text-white hover:bg-white/10 transition-all text-xs"
                 >
-                  Voltar ao mapa
+                  Voltar ao Campus
                 </button>
               </div>
             </div>
           ) : (
-            <>
-              <div className="mb-8">
-                <div className="text-xs font-medium text-[#315F4C] uppercase tracking-wider mb-2">
+            <div className="space-y-6">
+              <div>
+                <div className="text-xs font-bold text-[#10b981] uppercase tracking-wider mb-2 font-mono">
                   Quest {activeMission.number} de {totalMissions}
                 </div>
-                <h1 className="text-3xl font-semibold text-[#1C1C1C] mb-3">
+                <h1 className="text-3xl font-extrabold text-white mb-3 tracking-tight">
                   {activeMission.title}
                 </h1>
-                <p className="text-[#1C1C1C]/60">{activeMission.description}</p>
+                <p className="text-sm text-white/70 leading-relaxed">{activeMission.description}</p>
               </div>
 
-              <div className="bg-white border border-[#EDE7DC] rounded-2xl p-5 mb-5">
-                <h3 className="text-xs font-medium uppercase tracking-wider text-[#1C1C1C]/40 mb-2">
-                  Contexto
+              <div className="rounded-2xl border border-white/10 bg-[#111827] p-5 shadow-lg">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-white/40 mb-2 font-mono">
+                  📜 Contexto do Problema
                 </h3>
-                <p className="text-[#1C1C1C]/80 leading-relaxed">{activeMission.context}</p>
+                <p className="text-xs text-white/80 leading-relaxed">{activeMission.context}</p>
               </div>
 
-              <div className="bg-[#E8F6F0] border border-[#315F4C]/15 rounded-2xl p-5 mb-8">
-                <h3 className="text-xs font-medium uppercase tracking-wider text-[#315F4C] mb-2">
-                  Desafio
+              <div className="rounded-2xl border border-[#10b981]/30 bg-[#10b981]/10 p-5 shadow-lg">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#10b981] mb-2 font-mono">
+                  🎯 Desafio da Equipe
                 </h3>
-                <p className="text-[#1C1C1C]/80 leading-relaxed">{activeMission.challenge}</p>
+                <p className="text-xs text-white/90 leading-relaxed font-semibold">{activeMission.challenge}</p>
               </div>
 
-              <div className="space-y-6 mb-10">
+              <div className="space-y-6 pt-4">
                 {activeMission.fields.map((field) => (
-                  <div key={field.id}>
-                    <label className="block text-sm font-medium text-[#1C1C1C] mb-2">
+                  <div key={field.id} className="rounded-2xl border border-white/10 bg-[#111827] p-5">
+                    <label className="block text-xs font-bold text-white mb-3">
                       {field.label}
-                      {field.required && <span className="text-red-500 ml-1">*</span>}
+                      {field.required && <span className="text-rose-400 ml-1">*</span>}
                     </label>
 
                     {field.type === "text" && (
@@ -183,7 +184,7 @@ export default function EquipePage() {
                         value={answers[field.id] || ""}
                         onChange={(e) => handleFieldChange(field.id, e.target.value)}
                         placeholder={field.placeholder}
-                        className="w-full bg-white border border-[#EDE7DC] rounded-xl px-4 py-3 text-[#1C1C1C] placeholder-[#1C1C1C]/30 focus:outline-none focus:ring-2 focus:ring-[#315F4C]/30"
+                        className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-xs text-white placeholder-white/40 focus:outline-none focus:border-[#10b981]"
                       />
                     )}
 
@@ -193,7 +194,7 @@ export default function EquipePage() {
                         onChange={(e) => handleFieldChange(field.id, e.target.value)}
                         placeholder={field.placeholder}
                         rows={4}
-                        className="w-full bg-white border border-[#EDE7DC] rounded-xl px-4 py-3 text-[#1C1C1C] placeholder-[#1C1C1C]/30 focus:outline-none focus:ring-2 focus:ring-[#315F4C]/30 resize-y"
+                        className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-xs text-white placeholder-white/40 focus:outline-none focus:border-[#10b981] resize-y"
                       />
                     )}
 
@@ -202,10 +203,10 @@ export default function EquipePage() {
                         {field.options.map((opt) => (
                           <label
                             key={opt}
-                            className={`flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-colors ${
+                            className={`flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
                               answers[field.id] === opt
-                                ? "bg-[#E8F6F0] border-[#315F4C]/40"
-                                : "bg-white border-[#EDE7DC] hover:border-[#315F4C]/25"
+                                ? "bg-[#10b981]/20 border-[#10b981] text-white font-bold"
+                                : "bg-black/20 border-white/10 text-white/70 hover:bg-white/5"
                             }`}
                           >
                             <input
@@ -213,9 +214,9 @@ export default function EquipePage() {
                               name={field.id}
                               checked={answers[field.id] === opt}
                               onChange={() => handleFieldChange(field.id, opt)}
-                              className="w-4 h-4 accent-[#315F4C]"
+                              className="w-4 h-4 accent-[#10b981]"
                             />
-                            <span className="text-sm text-[#1C1C1C]">{opt}</span>
+                            <span className="text-xs">{opt}</span>
                           </label>
                         ))}
                       </div>
@@ -229,10 +230,10 @@ export default function EquipePage() {
                           return (
                             <label
                               key={opt}
-                              className={`flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-colors ${
+                              className={`flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
                                 checked
-                                  ? "bg-[#E8F6F0] border-[#315F4C]/40"
-                                  : "bg-white border-[#EDE7DC] hover:border-[#315F4C]/25"
+                                  ? "bg-[#10b981]/20 border-[#10b981] text-white font-bold"
+                                  : "bg-black/20 border-white/10 text-white/70 hover:bg-white/5"
                               }`}
                             >
                               <input
@@ -248,9 +249,9 @@ export default function EquipePage() {
                                     handleFieldChange(field.id, [...current, opt]);
                                   }
                                 }}
-                                className="w-4 h-4 accent-[#315F4C]"
+                                className="w-4 h-4 accent-[#10b981]"
                               />
-                              <span className="text-sm text-[#1C1C1C]">{opt}</span>
+                              <span className="text-xs">{opt}</span>
                             </label>
                           );
                         })}
@@ -260,94 +261,98 @@ export default function EquipePage() {
                 ))}
               </div>
 
-              <div className="sticky bottom-0 bg-[#FAF7F2]/95 backdrop-blur border-t border-[#EDE7DC] py-4 -mx-5 px-5">
+              <div className="sticky bottom-4 bg-[#111827]/95 backdrop-blur-md border border-white/20 p-4 rounded-2xl shadow-2xl">
                 <button
                   onClick={handleSubmit}
-                  className="w-full py-4 rounded-xl font-semibold text-white text-base bg-[#315F4C] hover:bg-[#2a5240] transition-colors"
+                  className="w-full py-4 rounded-xl font-black text-black text-sm bg-[#10b981] hover:bg-[#34d399] transition-all shadow-lg uppercase tracking-wider active:scale-95"
                 >
-                  Concluir quest · +{activeMission.xpReward} XP
+                  Concluir Quest · +{activeMission.xpReward} XP
                 </button>
-                <p className="text-center text-xs text-[#1C1C1C]/40 mt-2">
-                  Entrega: {activeMission.deliveryLabel}
+                <p className="text-center text-[10px] text-white/40 mt-2 font-mono">
+                  Entrega esperada: {activeMission.deliveryLabel}
                 </p>
               </div>
-            </>
+            </div>
           )}
         </main>
       </div>
     );
   }
 
-  // ========== TEAM DASHBOARD / QUEST LIST ==========
+  // ========== TEAM DASHBOARD & QUEST LIST VIEW ==========
   return (
-    <div className="min-h-screen bg-[#FAF7F2]">
-      <header className="border-b border-[#EDE7DC] bg-white/90 backdrop-blur sticky top-0 z-40">
-        <div className="max-w-4xl mx-auto px-5 py-4 flex items-center justify-between">
+    <div className="min-h-screen bg-[#0b0f17] text-white">
+      <header className="border-b border-white/10 bg-[#111827]/90 backdrop-blur-md sticky top-0 z-40">
+        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link
-            href="/mapa"
-            className="text-[#1C1C1C]/50 hover:text-[#1C1C1C] text-sm flex items-center gap-1"
+            href="/campus"
+            className="text-xs font-bold text-white/60 hover:text-white flex items-center gap-1 transition-all"
           >
-            ← Voltar ao mapa
+            ← Voltar ao Campus Virtual
           </Link>
           <div className="flex items-center gap-2">
             <span className="text-xl">{team.icon}</span>
-            <span className="font-semibold text-[#1C1C1C]">{team.shortName}</span>
+            <span className="font-extrabold text-sm text-[#10b981]">{team.shortName}</span>
           </div>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-5 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="inline-block px-3 py-1 rounded-full text-xs font-medium mb-4 bg-[#E8F6F0] text-[#315F4C]">
-            Portal da equipe
+      <main className="max-w-4xl mx-auto px-6 py-8 space-y-8">
+        {/* Header Card */}
+        <div className="rounded-3xl border border-white/15 bg-gradient-to-br from-[#111827] to-[#0f172a] p-8 shadow-2xl space-y-4 relative overflow-hidden">
+          <div className="flex items-center gap-3">
+            <span className="text-4xl p-3 rounded-2xl bg-white/5 border border-white/10">{team.icon}</span>
+            <div>
+              <span className="inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#10b981]/20 border border-[#10b981]/30 text-[#10b981]">
+                Portal de Equipe
+              </span>
+              <h1 className="text-3xl font-black text-white tracking-tight mt-1">{team.name}</h1>
+            </div>
           </div>
-          <h1 className="text-3xl font-semibold text-[#1C1C1C] mb-2">{team.name}</h1>
-          <p className="text-[#1C1C1C]/60 text-lg mb-6 leading-relaxed">{team.mission}</p>
+          <p className="text-white/70 text-sm leading-relaxed">{team.mission}</p>
 
-          {/* Progress */}
-          <div className="bg-white border border-[#EDE7DC] rounded-2xl p-5 mb-6">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-[#1C1C1C]">Progresso das quests</span>
-              <span className="text-sm font-semibold text-[#315F4C]">
-                {completedCount}/{totalMissions} · {percent}%
+          {/* Progress Bar */}
+          <div className="rounded-2xl border border-white/10 bg-black/30 p-4">
+            <div className="flex items-center justify-between mb-2 text-xs font-bold">
+              <span className="text-white/60">Progresso Geral da Equipe:</span>
+              <span className="text-[#10b981] font-mono">
+                {completedCount}/{totalMissions} Quests · {percent}%
               </span>
             </div>
-            <div className="h-3 bg-[#EDE7DC] rounded-full overflow-hidden">
+            <div className="h-3 bg-white/10 rounded-full overflow-hidden">
               <div
-                className="h-full rounded-full transition-all duration-500"
-                style={{
-                  width: `${percent}%`,
-                  backgroundColor: percent === 100 ? "#39FF14" : "#315F4C",
-                }}
+                className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-[#10b981] to-[#34d399] shadow-[0_0_12px_rgba(16,185,129,0.5)]"
+                style={{ width: `${percent}%` }}
               />
             </div>
           </div>
 
-          {/* Stats */}
-          <div className="flex flex-wrap gap-3">
-            <div className="bg-white border border-[#EDE7DC] rounded-xl px-5 py-3">
-              <div className="text-2xl font-semibold text-[#315F4C]">{progress?.xp || 0}</div>
-              <div className="text-xs text-[#1C1C1C]/45">XP</div>
+          {/* Stats Row */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-center">
+              <div className="text-2xl font-black text-amber-400">{progress?.xp || 0}</div>
+              <div className="text-[10px] text-white/50 font-bold uppercase">Total XP</div>
             </div>
-            <div className="bg-white border border-[#EDE7DC] rounded-xl px-5 py-3">
-              <div className="text-2xl font-semibold text-[#1C1C1C]">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-center">
+              <div className="text-2xl font-black text-white">
                 {completedCount}/{totalMissions}
               </div>
-              <div className="text-xs text-[#1C1C1C]/45">Quests</div>
+              <div className="text-[10px] text-white/50 font-bold uppercase">Quests</div>
             </div>
-            <div className="bg-white border border-[#EDE7DC] rounded-xl px-5 py-3">
-              <div className="text-2xl font-semibold text-[#315F4C]">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-center">
+              <div className="text-2xl font-black text-[#10b981]">
                 {progress?.badges.length || 0}
               </div>
-              <div className="text-xs text-[#1C1C1C]/45">Relíquias</div>
+              <div className="text-[10px] text-white/50 font-bold uppercase">Relíquias</div>
             </div>
           </div>
         </div>
 
-        {/* Quest list */}
+        {/* Quests List */}
         <div>
-          <h2 className="text-lg font-semibold text-[#1C1C1C] mb-4">Quests disponíveis</h2>
+          <h2 className="text-lg font-extrabold text-white mb-4 flex items-center gap-2">
+            <span>🗡️</span> Quests da Missão
+          </h2>
           <div className="space-y-3">
             {team.missions.map((mission, index) => {
               const unlocked = isMissionUnlocked(mission, index);
@@ -360,42 +365,42 @@ export default function EquipePage() {
                   onClick={() => unlocked && handleStartMission(mission)}
                   className={`w-full text-left p-5 rounded-2xl border transition-all ${
                     completed
-                      ? "bg-[#E8F6F0] border-[#315F4C]/25"
+                      ? "bg-[#10b981]/15 border-[#10b981]/40"
                       : unlocked
-                      ? "bg-white border-[#EDE7DC] hover:border-[#315F4C]/40 hover:shadow-md cursor-pointer"
-                      : "bg-[#FAF7F2] border-[#EDE7DC]/60 opacity-50 cursor-not-allowed"
+                      ? "bg-[#111827] border-white/15 hover:border-[#10b981]/60 hover:shadow-xl cursor-pointer"
+                      : "bg-[#0b0f17] border-white/5 opacity-40 cursor-not-allowed"
                   }`}
                 >
                   <div className="flex items-start gap-4">
                     <div
-                      className={`w-11 h-11 rounded-xl flex items-center justify-center font-semibold text-sm shrink-0 ${
+                      className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black text-sm shrink-0 shadow-inner ${
                         completed
-                          ? "bg-[#315F4C] text-white"
+                          ? "bg-[#10b981] text-black"
                           : unlocked
-                          ? "bg-[#E8F6F0] text-[#315F4C]"
-                          : "bg-[#EDE7DC] text-[#1C1C1C]/30"
+                          ? "bg-white/10 text-[#10b981] border border-[#10b981]/40"
+                          : "bg-white/5 text-white/30"
                       }`}
                     >
                       {completed ? "✓" : unlocked ? mission.number : "🔒"}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-[#1C1C1C]">{mission.title}</h3>
+                        <h3 className="font-bold text-sm text-white">{mission.title}</h3>
                         {completed && (
-                          <span className="text-xs text-[#315F4C] font-medium">Concluída</span>
+                          <span className="text-[10px] bg-[#10b981]/20 text-[#10b981] px-2 py-0.5 rounded-full font-bold border border-[#10b981]/30">
+                            Concluída
+                          </span>
                         )}
                       </div>
-                      <p className="text-sm text-[#1C1C1C]/50 line-clamp-1">
-                        {mission.description}
-                      </p>
+                      <p className="text-xs text-white/60 line-clamp-1">{mission.description}</p>
                       {unlocked && !completed && (
-                        <p className="text-xs mt-2 font-medium text-[#315F4C]">
+                        <p className="text-[11px] mt-2 font-bold text-[#10b981]">
                           +{mission.xpReward} XP · {mission.deliveryLabel}
                         </p>
                       )}
                       {completed && (
-                        <p className="text-xs mt-2 text-[#1C1C1C]/40">
-                          Clique para revisar respostas
+                        <p className="text-[10px] mt-2 text-white/40">
+                          Clique para revisar entregas registradas
                         </p>
                       )}
                     </div>
@@ -406,31 +411,21 @@ export default function EquipePage() {
           </div>
         </div>
 
-        {/* Badges */}
+        {/* Relíquias */}
         {progress && progress.badges.length > 0 && (
-          <div className="mt-10">
-            <h2 className="text-lg font-semibold text-[#1C1C1C] mb-4">Relíquias conquistadas</h2>
-            <div className="flex flex-wrap gap-3">
+          <div className="rounded-3xl border border-white/10 bg-[#111827] p-6 space-y-3">
+            <h2 className="text-sm font-extrabold text-white">🏆 Relíquias Conquistadas:</h2>
+            <div className="flex flex-wrap gap-2">
               {progress.badges.map((badge) => (
                 <div
                   key={badge}
-                  className="px-4 py-2 rounded-full bg-[#E8F6F0] border border-[#315F4C]/20 text-[#315F4C] text-sm font-medium"
+                  className="px-3.5 py-2 rounded-xl bg-[#10b981]/20 border border-[#10b981]/40 text-[#10b981] text-xs font-bold flex items-center gap-1.5 shadow-lg"
                 >
-                  🏅 {badge}
+                  <span>🏅</span>
+                  <span>{badge}</span>
                 </div>
               ))}
             </div>
-          </div>
-        )}
-
-        {percent === 100 && (
-          <div className="mt-10 bg-[#E8F6F0] border border-[#315F4C]/20 rounded-2xl p-6 text-center">
-            <p className="text-lg font-semibold text-[#315F4C] mb-1">
-              Território 100% restaurado!
-            </p>
-            <p className="text-sm text-[#1C1C1C]/60">
-              Todas as quests desta equipe foram concluídas.
-            </p>
           </div>
         )}
       </main>
