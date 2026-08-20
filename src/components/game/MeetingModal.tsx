@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import LiveKitAudio from "./LiveKitAudio";
 
 interface Props {
   onClose: () => void;
@@ -9,15 +10,14 @@ interface Props {
 }
 
 export default function MeetingModal({ onClose, userRole = "STUDENT", displayName = "Visitante" }: Props) {
-  const [meetingUrl, setMeetingUrl] = useState("https://meet.jit.si/MissaoConstrutoresCentral");
   const [isClosed, setIsClosed] = useState(false);
   const [agenda, setAgenda] = useState("Reunião Geral da Feira Carbono Zero - Alinhamento de Entregáveis");
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 pointer-events-auto">
-      <div className="w-full max-w-md rounded-3xl border border-emerald-500/40 bg-[#182333]/90 p-6 text-white shadow-2xl backdrop-blur-md">
+      <div className="w-full max-w-2xl rounded-3xl border border-emerald-500/40 bg-[#182333]/90 p-6 text-white shadow-2xl backdrop-blur-md">
         <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
-          <h2 className="font-bold text-lg">Sala de Reunião Central</h2>
+          <h2 className="font-bold text-lg">Sala de Reunião Central (LiveKit)</h2>
           <button
             onClick={onClose}
             className="rounded-full bg-white/10 px-3 py-1.5 text-xs text-white/80 hover:bg-white/20 transition-all font-semibold"
@@ -56,54 +56,15 @@ export default function MeetingModal({ onClose, userRole = "STUDENT", displayNam
             />
           </div>
 
-          {/* External Video Meeting Link */}
-          <div>
-            <label className="text-white/50 font-bold block mb-1">Link da Reunião Externa (Meet / Zoom / Jitsi):</label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={meetingUrl}
-                onChange={(e) => setMeetingUrl(e.target.value)}
-                className="flex-1 rounded-xl border border-white/20 bg-black/30 p-2.5 text-white focus:outline-none focus:border-emerald-400 font-mono text-[11px]"
-              />
-              <a
-                href={meetingUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="rounded-xl bg-emerald-600 px-4 py-2.5 font-extrabold text-white hover:bg-emerald-500 flex items-center gap-1 shadow-lg"
-              >
-                <span>Entrar</span>
-              </a>
-            </div>
+          {/* LiveKit Video Meeting Link */}
+          <div className="h-72 mt-4">
+            <LiveKitAudio 
+              roomName="ReuniaoCentral"
+              identity={displayName.replace(/[^a-zA-Z0-9]/g, "") + "_" + Math.floor(Math.random()*1000)}
+              displayName={displayName}
+              isVideoEnabled={true}
+            />
           </div>
-
-          {/* Participant List */}
-          <div>
-            <label className="text-white/50 font-bold block mb-2">Participantes na Mesa (6 Lugares):</label>
-            <div className="space-y-1.5 rounded-xl bg-black/20 p-2.5 border border-white/5">
-              <div className="flex items-center justify-between text-emerald-400 font-bold">
-                <span>{displayName} (Você)</span>
-                <span className="text-[10px] bg-emerald-950 px-2 py-0.5 rounded border border-emerald-500/40">Membro</span>
-              </div>
-              <div className="flex items-center justify-between text-white/70">
-                <span>Prof. Niltes</span>
-                <span className="text-[10px] bg-purple-950 px-2 py-0.5 rounded border border-purple-500/40">Professora</span>
-              </div>
-              <div className="flex items-center justify-between text-white/70">
-                <span>Prietto</span>
-                <span className="text-[10px] bg-blue-950 px-2 py-0.5 rounded border border-blue-500/40">Ubongo Admin</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-6 pt-3 border-t border-white/10 text-center">
-          <button
-            onClick={onClose}
-            className="w-full rounded-xl bg-white/10 py-2.5 font-bold hover:bg-white/20 transition-all text-xs"
-          >
-            Voltar ao Mapa
-          </button>
         </div>
       </div>
     </div>
