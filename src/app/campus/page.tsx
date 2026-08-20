@@ -77,7 +77,7 @@ export default function CampusPage() {
               </div>
               <div className="mt-1 text-xs text-white/50 font-mono">Role: {role}</div>
               <div className="mt-3 rounded-xl bg-white/5 p-2.5 text-xs font-bold text-[#8ee85f] border border-white/10">
-                🛡️ Equipe {teamSlug.toUpperCase()}
+                Equipe {teamSlug.toUpperCase()}
               </div>
             </div>
 
@@ -86,17 +86,17 @@ export default function CampusPage() {
                 NAVEGAÇÃO RÁPIDA
               </div>
               <Link href="/campus" className="block rounded-xl bg-[#8ee85f]/20 px-3 py-2 font-bold text-[#8ee85f] mb-1">
-                ⌂ Campus Office 2D
+                Campus Office 2D
               </Link>
               <Link href={`/equipe/${teamSlug}`} className="block rounded-xl px-3 py-2 text-white/80 hover:bg-white/10 mb-1">
-                ◈ Painel da Minha Equipe
+                Painel da Minha Equipe
               </Link>
               <Link href="/avatar" className="block rounded-xl px-3 py-2 text-white/80 hover:bg-white/10 mb-1">
-                🎨 Customizar Avatar
+                Customizar Avatar
               </Link>
               {(role === "TEACHER" || role === "UBONGO_ADMIN" || role === "SUPER_ADMIN") && (
                 <Link href="/admin" className="block rounded-xl bg-purple-600/30 border border-purple-400/40 px-3 py-2 font-bold text-purple-300">
-                  ⚙ Painel do Professor
+                  Painel do Professor
                 </Link>
               )}
             </nav>
@@ -107,7 +107,7 @@ export default function CampusPage() {
             <header className="mb-2 flex items-center justify-between rounded-2xl border border-white/20 bg-[#111923] px-4 py-2.5">
               <div>
                 <h1 className="font-extrabold text-base tracking-wide text-white">MISSÃO CONSTRUTORES</h1>
-                <p className="text-xs text-white/50">Escritório Virtual Interativo · Feira Carbono Zero</p>
+                <p className="text-xs text-white/50">Escritório Virtual Interativo - Feira Carbono Zero</p>
               </div>
               <div className="flex items-center gap-2">
                 <NiaVoiceStreamButton text={niaText} className="rounded-xl bg-[#8ee85f] px-3.5 py-2 text-xs font-black text-[#10160e] shadow-lg hover:bg-[#a6f07b] transition-all" />
@@ -128,7 +128,7 @@ export default function CampusPage() {
           {/* Right Sidebar */}
           <aside className="hidden space-y-2 lg:block">
             <div className="rounded-2xl border border-[#8ee85f]/40 bg-[#111923] p-4">
-              <div className="text-sm font-black text-[#8ee85f] uppercase tracking-wider">🤖 AGENTE NIA UBONGO</div>
+              <div className="text-sm font-black text-[#8ee85f] uppercase tracking-wider">AGENTE NIA UBONGO</div>
               <p className="mt-2 text-xs text-white/70">
                 Aproxime-se da NIA no mapa para tirar dúvidas pedagógicas sobre a feira e suas missões.
               </p>
@@ -141,18 +141,18 @@ export default function CampusPage() {
             </div>
 
             <div className="rounded-2xl border border-white/20 bg-[#111923] p-4">
-              <div className="mb-3 text-sm font-bold text-[#8ee85f]">🎮 ÁREA DE JOGOS & CAFÉ</div>
+              <div className="mb-3 text-sm font-bold text-[#8ee85f]">ÁREA DE JOGOS & CAFÉ</div>
               <div className="space-y-2 text-xs">
                 <div className="rounded-xl bg-white/5 p-2.5 border border-white/10">
-                  <div className="font-bold text-emerald-300">⚽ Futebol 2D</div>
+                  <div className="font-bold text-emerald-300">Futebol 2D</div>
                   <div className="text-[10px] text-white/50">Campo no mapa central</div>
                 </div>
                 <div className="rounded-xl bg-white/5 p-2.5 border border-white/10">
-                  <div className="font-bold text-emerald-300">🏓 Ping-Pong 2D</div>
+                  <div className="font-bold text-emerald-300">Ping-Pong 2D</div>
                   <div className="text-[10px] text-white/50">Mesa na área de jogos</div>
                 </div>
                 <div className="rounded-xl bg-white/5 p-2.5 border border-white/10">
-                  <div className="font-bold text-amber-300">☕ Café da Ubongo</div>
+                  <div className="font-bold text-amber-300">Café da Ubongo</div>
                   <div className="text-[10px] text-white/50">Bônus de velocidade na cantina</div>
                 </div>
               </div>
@@ -163,15 +163,15 @@ export default function CampusPage() {
 
       {/* NIA Modal */}
       {niaOpen && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-3xl border-2 border-[#8ee85f]/40 bg-[#111923] p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 backdrop-blur-xs p-4 pointer-events-auto">
+          <div className="w-full max-w-md rounded-3xl border border-[#8ee85f]/40 bg-[#111923]/95 p-6 shadow-2xl backdrop-blur-md">
             <div className="mb-2 flex items-center justify-between border-b border-white/10 pb-3">
               <div>
-                <h2 className="text-lg font-extrabold text-[#8ee85f]">NIA · Consultora Ubongo</h2>
+                <h2 className="text-lg font-extrabold text-[#8ee85f]">NIA - Consultora Ubongo</h2>
                 <p className="text-[11px] text-white/50">IA imersiva do Missão Construtores</p>
               </div>
-              <button onClick={() => setNiaOpen(false)} className="rounded-full bg-white/10 p-1.5 text-xs text-white/70 hover:bg-white/20">
-                ✖
+              <button onClick={() => setNiaOpen(false)} className="rounded-full bg-white/10 px-2.5 py-1 text-xs text-white/70 hover:bg-white/20">
+                Fechar
               </button>
             </div>
 

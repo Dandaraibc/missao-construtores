@@ -95,7 +95,6 @@ export default function NiaVoiceStreamButton({ text, className = "", modelId }: 
       className={`flex items-center gap-2 transition-all active:scale-95 ${className}`}
       aria-label="Ouvir resposta da NIA com Fish Audio"
     >
-      <span className="text-base">{speaking ? "🔊" : "🎤"}</span>
       <span>
         {loading
           ? "Gerando Voz..."

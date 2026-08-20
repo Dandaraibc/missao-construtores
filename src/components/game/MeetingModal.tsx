@@ -11,21 +11,18 @@ interface Props {
 export default function MeetingModal({ onClose, userRole = "STUDENT", displayName = "Visitante" }: Props) {
   const [meetingUrl, setMeetingUrl] = useState("https://meet.jit.si/MissaoConstrutoresCentral");
   const [isClosed, setIsClosed] = useState(false);
-  const [agenda, setAgenda] = useState("Reunião Geral da Feira Carbono Zero — Alinhamento de Entregáveis");
+  const [agenda, setAgenda] = useState("Reunião Geral da Feira Carbono Zero - Alinhamento de Entregáveis");
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4">
-      <div className="w-full max-w-md rounded-3xl border-2 border-emerald-500/50 bg-[#182333] p-6 text-white shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 pointer-events-auto">
+      <div className="w-full max-w-md rounded-3xl border border-emerald-500/40 bg-[#182333]/90 p-6 text-white shadow-2xl backdrop-blur-md">
         <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">👥</span>
-            <h2 className="font-bold text-lg">Sala de Reunião Central</h2>
-          </div>
+          <h2 className="font-bold text-lg">Sala de Reunião Central</h2>
           <button
             onClick={onClose}
-            className="rounded-full bg-white/10 p-2 text-xs hover:bg-white/20 transition-all"
+            className="rounded-full bg-white/10 px-3 py-1.5 text-xs text-white/80 hover:bg-white/20 transition-all font-semibold"
           >
-            ✖ Fechar
+            Fechar
           </button>
         </div>
 
@@ -35,7 +32,7 @@ export default function MeetingModal({ onClose, userRole = "STUDENT", displayNam
             <div>
               <span className="text-white/50 block">Status da Sala:</span>
               <span className={`font-bold ${isClosed ? "text-amber-400" : "text-emerald-400"}`}>
-                {isClosed ? "🔒 Sala Fechada (Privada)" : "🌐 Sala Aberta (Pública)"}
+                {isClosed ? "Sala Fechada (Privada)" : "Sala Aberta (Pública)"}
               </span>
             </div>
             {userRole !== "STUDENT" && (
@@ -76,7 +73,6 @@ export default function MeetingModal({ onClose, userRole = "STUDENT", displayNam
                 className="rounded-xl bg-emerald-600 px-4 py-2.5 font-extrabold text-white hover:bg-emerald-500 flex items-center gap-1 shadow-lg"
               >
                 <span>Entrar</span>
-                <span>↗</span>
               </a>
             </div>
           </div>
@@ -86,15 +82,15 @@ export default function MeetingModal({ onClose, userRole = "STUDENT", displayNam
             <label className="text-white/50 font-bold block mb-2">Participantes na Mesa (6 Lugares):</label>
             <div className="space-y-1.5 rounded-xl bg-black/20 p-2.5 border border-white/5">
               <div className="flex items-center justify-between text-emerald-400 font-bold">
-                <span>👤 {displayName} (Você)</span>
+                <span>{displayName} (Você)</span>
                 <span className="text-[10px] bg-emerald-950 px-2 py-0.5 rounded border border-emerald-500/40">Membro</span>
               </div>
               <div className="flex items-center justify-between text-white/70">
-                <span>👤 Prof. Niltes</span>
+                <span>Prof. Niltes</span>
                 <span className="text-[10px] bg-purple-950 px-2 py-0.5 rounded border border-purple-500/40">Professora</span>
               </div>
               <div className="flex items-center justify-between text-white/70">
-                <span>👤 Prietto</span>
+                <span>Prietto</span>
                 <span className="text-[10px] bg-blue-950 px-2 py-0.5 rounded border border-blue-500/40">Ubongo Admin</span>
               </div>
             </div>

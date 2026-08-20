@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useRef, useState } from "react";
 import * as Phaser from "phaser";
 import { MultiplayerClient } from "@/game/network/MultiplayerClient";
@@ -43,7 +44,6 @@ const meetingSeats = [
   { x: 870, y: 420 },
 ];
 
-// Ubongo Admins: Matheus, Prietto, Dandara
 const npcList: (PlayerTarget & { x: number; y: number })[] = [
   { name: "NIA", role: "IA Ubongo", team: "ubongo", isNia: true, x: 650, y: 850 },
   { name: "Matheus", role: "Ubongo Admin", team: "ubongo", x: 1150, y: 560 },
@@ -102,7 +102,7 @@ function avatar(
   let zzzText: Phaser.GameObjects.Text | null = null;
   if (isOffline) {
     zzzText = scene.add.text(0, -48, "Zzz...", {
-      fontFamily: "monospace",
+      fontFamily: "sans-serif",
       fontSize: "10px",
       color: "#93c5fd",
     }).setOrigin(0.5);
@@ -123,7 +123,7 @@ function avatar(
     waves,
     scene
       .add.text(0, -32, name + (isOffline ? " (Zzz)" : ""), {
-        fontFamily: "monospace",
+        fontFamily: "sans-serif",
         fontSize: "11px",
         color: isOffline ? "#64748b" : "#182333",
         backgroundColor: isOffline ? "#e2e8f0" : "#fff8df",
@@ -164,7 +164,7 @@ export default function VirtualCampus({
 }: Props) {
   const mountRef = useRef<HTMLDivElement>(null);
   const joystickRef = useRef({ x: 0, y: 0 });
-  const promptRef = useRef("Explore o Office · aproxime-se de um objeto ou pessoa para interagir");
+  const promptRef = useRef("Use as setas/WASD ou clique no mapa para andar. Aproxime-se dos objetos para interagir (E).");
   const [prompt, setPrompt] = useState(promptRef.current);
   const [online, setOnline] = useState(1);
   const [currentAudioZone, setCurrentAudioZone] = useState("AREA_CENTRAL");
@@ -189,12 +189,6 @@ export default function VirtualCampus({
     typeof window === "undefined" ? [] : getChat("area").slice(-30)
   );
 
-  // Player Proximity & Action Prompt
-  const [nearbyTarget, setNearbyTarget] = useState<PlayerTarget | null>(null);
-  const [actionPrompt, setActionPrompt] = useState<{
-    label: string;
-    action: () => void;
-  } | null>(null);
   const [interactionModal, setInteractionModal] = useState<PlayerTarget | null>(null);
 
   const micStream = useRef<MediaStream | null>(null);
@@ -385,52 +379,6 @@ export default function VirtualCampus({
         this.nia.setInteractive(new Phaser.Geom.Rectangle(-20, -40, 40, 60), Phaser.Geom.Rectangle.Contains);
         this.nia.on("pointerdown", () => propsRef.current.onNiaInteract?.());
 
-        this.add
-          .text(110, 35, "DESCOBERTAS", {
-            fontFamily: "monospace",
-            fontSize: "14px",
-            color: "#fff8df",
-            backgroundColor: "#6d4b94",
-            padding: { x: 7, y: 4 },
-          })
-          .setDepth(-5);
-        this.add
-          .text(360, 35, "IDEIAS", {
-            fontFamily: "monospace",
-            fontSize: "14px",
-            color: "#fff8df",
-            backgroundColor: "#3d708d",
-            padding: { x: 7, y: 4 },
-          })
-          .setDepth(-5);
-        this.add
-          .text(610, 35, "CRIATIVA", {
-            fontFamily: "monospace",
-            fontSize: "14px",
-            color: "#fff8df",
-            backgroundColor: "#6d4b94",
-            padding: { x: 7, y: 4 },
-          })
-          .setDepth(-5);
-        this.add
-          .text(1000, 35, "GUARDIÕES", {
-            fontFamily: "monospace",
-            fontSize: "14px",
-            color: "#fff8df",
-            backgroundColor: "#3d708d",
-            padding: { x: 7, y: 4 },
-          })
-          .setDepth(-5);
-        this.add
-          .text(580, 390, "SALA CENTRAL · 22 LUGARES", {
-            fontFamily: "monospace",
-            fontSize: "14px",
-            color: "#e9fff1",
-            backgroundColor: "#315f4c",
-            padding: { x: 7, y: 4 },
-          })
-          .setDepth(-5);
-
         // Soccer ball spawn inside the green pitch at x: 1360, y: 780
         this.ball = this.add
           .circle(1360, 780, 7, 0xffffff)
@@ -513,7 +461,7 @@ export default function VirtualCampus({
             });
           })
           .catch(() =>
-            safeSetPrompt("Modo local · navegação fluida ativada")
+            safeSetPrompt("Navegação fluida ativada")
           );
       }
 
@@ -539,63 +487,24 @@ export default function VirtualCampus({
       }
 
       drawCafeteria() {
-        this.add
-          .text(1250, 65, "CANTINA / LANCHONETE", {
-            fontFamily: "monospace",
-            fontSize: "13px",
-            color: "#fff8df",
-            backgroundColor: "#8a603e",
-            padding: { x: 8, y: 4 },
-          })
-          .setDepth(4);
-
-        const coffeeBtn = this.add
-          .text(1280, 120, "☕ CAFÉ DA UBONGO [ CLIQUE ]", {
-            fontFamily: "monospace",
-            fontSize: "11px",
-            color: "#10b981",
-            backgroundColor: "#182333",
-            padding: { x: 6, y: 3 },
-          })
-          .setOrigin(0.5)
-          .setDepth(230)
-          .setInteractive({ useHandCursor: true });
-
-        coffeeBtn.on("pointerdown", () => {
+        // Direct click trigger on Coffee Machine area without ugly text badges over art
+        const coffeeArea = this.add.zone(1280, 120, 80, 60).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        coffeeArea.on("pointerdown", () => {
           setHasCoffeeEffect(true);
-          safeSetPrompt("☕ Efeito Café ativado! Sua velocidade aumentou temporariamente.");
+          safeSetPrompt("Efeito Café ativado! Sua velocidade aumentou temporariamente.");
         });
       }
 
+      // Interactive Ping Pong Zone on direct click (No ugly text boxes over art!)
       drawPingPongTable() {
-        const pingPongText = this.add
-          .text(1180, 740, "🏓 PING-PONG 2D [ JOGAR ]", {
-            fontFamily: "monospace",
-            fontSize: "12px",
-            color: "#10b981",
-            backgroundColor: "#182333",
-            padding: { x: 6, y: 3 },
-          })
-          .setOrigin(0.5)
-          .setDepth(800)
-          .setInteractive({ useHandCursor: true });
-
-        pingPongText.on("pointerdown", () => {
+        const pingPongZone = this.add.zone(1180, 780, 120, 140).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        pingPongZone.on("pointerdown", () => {
           setShowPingPong(true);
         });
       }
 
       drawSoccerField() {
-        this.add
-          .text(1360, 740, "⚽ FUTEBOL 2D", {
-            fontFamily: "monospace",
-            fontSize: "12px",
-            color: "#38bdf8",
-            backgroundColor: "#182333",
-            padding: { x: 6, y: 3 },
-          })
-          .setOrigin(0.5)
-          .setDepth(800);
+        // Interactive Field Zone
       }
 
       drawOfflineStudents() {
@@ -616,7 +525,7 @@ export default function VirtualCampus({
         }
 
         const furnitureBoxes = [
-          [1120, 480, 300, 40], // Ubongo admin desks inside room
+          [1120, 480, 300, 40], // Ubongo admin desks
           [740, 130, 200, 40],  // Teacher desks
           [1240, 140, 180, 30], // Cafeteria counter
         ];
@@ -633,14 +542,14 @@ export default function VirtualCampus({
           const seat = occupiedSeat;
           occupiedSeat = undefined;
           if (seat) local.setPosition(seat.x, seat.y + 28);
-          safeSetPrompt("Você levantou");
+          safeSetPrompt("Você levantou.");
           return;
         }
 
         // Check Coffee Counter
         if (Phaser.Math.Distance.Between(local.x, local.y, 1280, 120) < 85) {
           setHasCoffeeEffect(true);
-          safeSetPrompt("☕ Efeito Café ativado! Sua velocidade aumentou temporariamente.");
+          safeSetPrompt("Efeito Café ativado! Sua velocidade aumentou temporariamente.");
           return;
         }
 
@@ -650,7 +559,7 @@ export default function VirtualCampus({
           return;
         }
 
-        // Check Computer Desks inside rooms
+        // Check Computer Desks
         const desk = computerDesks.find(
           (d) => Phaser.Math.Distance.Between(local!.x, local!.y, d.x, d.y) < 70
         );
@@ -685,7 +594,7 @@ export default function VirtualCampus({
           seated = true;
           occupiedSeat = seat;
           local.setPosition(seat.x, seat.y);
-          safeSetPrompt("E — Levantar");
+          safeSetPrompt("Aperte E para levantar.");
           return;
         }
 
@@ -695,7 +604,7 @@ export default function VirtualCampus({
         if (d)
           safeSetPrompt(
             d.team === null || d.team === propsRef.current.teamSlug || propsRef.current.role !== "STUDENT"
-              ? `E — Entrar em ${d.label}`
+              ? `Aperte E para entrar em ${d.label}`
               : `Missão exclusiva da Equipe ${d.team}`
           );
       }
@@ -712,7 +621,7 @@ export default function VirtualCampus({
 
         if (seated && occupiedSeat) {
           local.setPosition(occupiedSeat.x, occupiedSeat.y);
-          safeSetPrompt("E — Levantar");
+          safeSetPrompt("Aperte E para levantar.");
           return;
         }
 
@@ -846,26 +755,18 @@ export default function VirtualCampus({
           if (Phaser.Math.Distance.Between(local.x, local.y, this.ball.x, this.ball.y) < 32) {
             this.ballVelocity = local.x < this.ball.x ? 4 : -4;
             this.ballVertical = local.y < this.ball.y ? 2 : -2;
-            safeSetPrompt("⚽ Você chutou a bola no campo de futebol 2D!");
+            safeSetPrompt("Você chutou a bola de futebol!");
           }
         }
 
-        // Check Proximity Interactivity & Set Prompts / Action Cards
+        // Clean text prompts in the bottom bar only (No obstructive floating pop-ups!)
         if (Phaser.Math.Distance.Between(local.x, local.y, 1280, 120) < 85) {
-          setActionPrompt({
-            label: "☕ TOMAR CAFÉ DA UBONGO (Aumentar Velocidade)",
-            action: () => setHasCoffeeEffect(true),
-          });
-          safeSetPrompt("E — TOMAR CAFÉ DA UBONGO (Bônus de Velocidade)");
+          safeSetPrompt("Aperte E ou clique para tomar café da Ubongo (Bônus de velocidade)");
           return;
         }
 
         if (Phaser.Math.Distance.Between(local.x, local.y, 1180, 780) < 100) {
-          setActionPrompt({
-            label: "🏓 JOGAR PING-PONG 2D",
-            action: () => setShowPingPong(true),
-          });
-          safeSetPrompt("E ou CLIQUE — JOGAR PING-PONG 2D");
+          safeSetPrompt("Aperte E ou clique na mesa para jogar Ping-Pong 2D");
           return;
         }
 
@@ -873,20 +774,12 @@ export default function VirtualCampus({
           (d) => Phaser.Math.Distance.Between(local!.x, local!.y, d.x, d.y) < 70
         );
         if (desk) {
-          setActionPrompt({
-            label: `💻 ACESSAR COMPUTADOR (${desk.label})`,
-            action: () => setShowRpgMission(true),
-          });
-          safeSetPrompt(`E ou CLIQUE — USAR COMPUTADOR (${desk.label})`);
+          safeSetPrompt(`Aperte E ou clique no computador para acessar (${desk.label})`);
           return;
         }
 
         if (Phaser.Math.Distance.Between(local.x, local.y, 650, 420) < 130) {
-          setActionPrompt({
-            label: "👥 ENTRAR NA REUNIÃO CENTRAL",
-            action: () => setShowMeetingModal(true),
-          });
-          safeSetPrompt("E ou CLIQUE — ENTRAR NA REUNIÃO CENTRAL");
+          safeSetPrompt("Aperte E para entrar na Reunião Central");
           return;
         }
 
@@ -894,26 +787,13 @@ export default function VirtualCampus({
           (npc) => Phaser.Math.Distance.Between(local!.x, local!.y, npc.x, npc.y) < 85
         );
         if (targetNpc) {
-          setNearbyTarget(targetNpc);
-          setActionPrompt({
-            label: `💬 CONVERSAR COM ${targetNpc.name.toUpperCase()}`,
-            action: () => {
-              if (targetNpc.isNia) {
-                propsRef.current.onNiaInteract?.();
-              } else {
-                setInteractionModal(targetNpc);
-              }
-            },
-          });
-          safeSetPrompt(`E ou CLIQUE — CONVERSAR COM ${targetNpc.name.toUpperCase()}`);
+          safeSetPrompt(`Aperte E ou clique para conversar com ${targetNpc.name}`);
         } else {
-          setNearbyTarget(null);
-          setActionPrompt(null);
           const nearbySeat = meetingSeats.find(
             (item) => Phaser.Math.Distance.Between(local!.x, local!.y, item.x, item.y) < 55
           );
           if (nearbySeat) {
-            safeSetPrompt("E — Sentar");
+            safeSetPrompt("Aperte E para sentar");
           } else {
             const d = doors.find(
               (v) => Phaser.Math.Distance.Between(local!.x, local!.y, v.x, v.y) < 130
@@ -921,9 +801,9 @@ export default function VirtualCampus({
             safeSetPrompt(
               d
                 ? d.team === null || d.team === propsRef.current.teamSlug || propsRef.current.role !== "STUDENT"
-                  ? `E — Entrar em ${d.label}`
+                  ? `Aperte E para entrar em ${d.label}`
                   : `Missão exclusiva da Equipe ${d.team}`
-                : "Explore o Office · aproxime-se de um objeto ou clique para interagir"
+                : "Explore o Office · Aproxime-se dos objetos para interagir"
             );
           }
         }
@@ -966,7 +846,7 @@ export default function VirtualCampus({
     <div className="relative h-full min-h-[560px] w-full overflow-hidden rounded-2xl border-4 border-[#315f4c] bg-[#0b0f17]">
       <div ref={mountRef} className="absolute inset-0" />
 
-      {/* PERMANENT SOCIAL HUD (Desktop & Mobile - Bottom Right position) */}
+      {/* PERMANENT SOCIAL HUD (Bottom Right - Clean Vector Icons & Text) */}
       <div className="absolute right-3 bottom-16 sm:bottom-4 flex flex-wrap items-center gap-2 rounded-2xl border border-white/20 bg-[#182333]/95 p-2.5 text-xs font-semibold text-white shadow-2xl backdrop-blur-md z-30">
         <div className="hidden sm:flex items-center gap-1.5 rounded-xl bg-white/10 px-2.5 py-1.5 text-[11px]">
           <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -991,12 +871,12 @@ export default function VirtualCampus({
         >
           <span>
             {micState === "MIC_ON"
-              ? "🎤 MIC: LIGADO"
+              ? "MIC: LIGADO"
               : micState === "MIC_DENIED"
-              ? "🚫 MIC: NEGADO"
+              ? "MIC: NEGADO"
               : micState === "MIC_UNAVAILABLE"
-              ? "⚠️ MIC: INDISPONÍVEL"
-              : "🔇 MIC: MUTADO"}
+              ? "MIC: INDISPONÍVEL"
+              : "MIC: MUTADO"}
           </span>
           {isSpeaking && <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />}
         </button>
@@ -1011,7 +891,7 @@ export default function VirtualCampus({
               : "bg-amber-950/50 text-amber-400 border border-amber-500/50 hover:bg-amber-900/60"
           }`}
         >
-          <span>{audioState === "AUDIO_ON" ? "🔊 ÁUDIO: OUVINDO" : "🔇 ÁUDIO: SILENCIADO"}</span>
+          <span>{audioState === "AUDIO_ON" ? "ÁUDIO: OUVINDO" : "ÁUDIO: SILENCIADO"}</span>
         </button>
 
         {/* 3. CHAT BUTTON WITH UNREAD BADGE */}
@@ -1024,7 +904,7 @@ export default function VirtualCampus({
               : "bg-purple-950/40 text-purple-300 border border-purple-500/30 hover:bg-purple-900/50"
           }`}
         >
-          <span>💬 CHAT</span>
+          <span>CHAT</span>
           {unreadCount > 0 && !chatOpen && (
             <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-black text-white shadow-lg animate-pulse">
               {unreadCount}
@@ -1033,40 +913,20 @@ export default function VirtualCampus({
         </button>
       </div>
 
-      {/* PROXIMITY INTERACTION ACTION BANNER */}
-      {actionPrompt && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-4 rounded-2xl border-2 border-emerald-400 bg-[#0b0f17]/95 px-6 py-3 text-white shadow-[0_0_25px_rgba(16,185,129,0.3)] backdrop-blur-xl animate-bounce">
-          <span className="font-extrabold text-sm text-emerald-300 tracking-wide">
-            {actionPrompt.label}
-          </span>
-          <button
-            onClick={actionPrompt.action}
-            className="rounded-xl bg-emerald-500 px-5 py-2 text-xs font-black text-black shadow-lg hover:bg-emerald-400 active:scale-95 transition-transform uppercase tracking-wider"
-          >
-            [ CLIQUE AQUI OU APERTE 'E' ]
-          </button>
-        </div>
-      )}
-
       {/* PLAYER INTERACTION MODAL */}
       {interactionModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm rounded-3xl border-2 border-emerald-500/40 bg-[#182333] p-6 text-white shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 backdrop-blur-xs p-4">
+          <div className="w-full max-w-sm rounded-3xl border border-emerald-500/40 bg-[#182333]/90 p-6 text-white shadow-2xl backdrop-blur-md">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-emerald-500/20 border border-emerald-400 flex items-center justify-center text-lg">
-                  👤
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg">{interactionModal.name}</h3>
-                  <p className="text-xs text-emerald-400 font-mono">{interactionModal.role}</p>
-                </div>
+              <div>
+                <h3 className="font-bold text-lg">{interactionModal.name}</h3>
+                <p className="text-xs text-emerald-400 font-mono">{interactionModal.role}</p>
               </div>
               <button
                 onClick={() => setInteractionModal(null)}
-                className="rounded-full bg-white/10 p-1.5 text-xs text-white/70 hover:bg-white/20"
+                className="rounded-full bg-white/10 px-2.5 py-1 text-xs text-white/70 hover:bg-white/20"
               >
-                ✖
+                Fechar
               </button>
             </div>
 
@@ -1122,8 +982,8 @@ export default function VirtualCampus({
         />
       )}
 
-      {/* BOTTOM PROMPT BAR */}
-      <div className="absolute bottom-4 left-4 rounded-xl bg-[#182333]/90 px-4 py-2 text-sm font-bold text-white shadow-lg border border-white/10">
+      {/* BOTTOM PROMPT BAR (Clean, non-intrusive textual guidance) */}
+      <div className="absolute bottom-4 left-4 max-w-xl rounded-xl bg-[#182333]/90 px-4 py-2 text-xs font-semibold text-white shadow-lg border border-white/10">
         {prompt}
       </div>
 
@@ -1131,12 +991,12 @@ export default function VirtualCampus({
       {chatOpen && (
         <div className="absolute right-3 top-14 w-84 max-w-[90vw] rounded-2xl border border-white/20 bg-[#182333]/95 p-4 text-xs text-white shadow-2xl backdrop-blur-xl z-40">
           <div className="mb-3 flex items-center justify-between border-b border-white/10 pb-2">
-            <span className="font-bold text-sm tracking-wide text-purple-300">💬 CHAT CONTEXTUAL</span>
+            <span className="font-bold text-sm tracking-wide text-purple-300">CHAT CONTEXTUAL</span>
             <button
               onClick={() => setChatOpen(false)}
               className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-white/70 hover:bg-white/20"
             >
-              ✖
+              Fechar
             </button>
           </div>
 
@@ -1147,7 +1007,7 @@ export default function VirtualCampus({
                 chatTab === "area" ? "bg-purple-600 text-white shadow" : "text-white/60 hover:text-white"
               }`}
             >
-              🌐 ÁREA
+              ÁREA
             </button>
             <button
               onClick={() => setChatTab("team")}
@@ -1155,7 +1015,7 @@ export default function VirtualCampus({
                 chatTab === "team" ? "bg-purple-600 text-white shadow" : "text-white/60 hover:text-white"
               }`}
             >
-              🛡️ EQUIPE
+              EQUIPE
             </button>
             <button
               onClick={() => setChatTab("meeting")}
@@ -1163,7 +1023,7 @@ export default function VirtualCampus({
                 chatTab === "meeting" ? "bg-purple-600 text-white shadow" : "text-white/60 hover:text-white"
               }`}
             >
-              👥 REUNIÃO
+              REUNIÃO
             </button>
           </div>
 
@@ -1176,12 +1036,7 @@ export default function VirtualCampus({
               chatMessages.map((msg) => (
                 <div key={msg.id} className="rounded-xl bg-white/5 p-2.5 border border-white/5">
                   <div className="flex justify-between items-center font-bold text-[#8ee85f] mb-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className="h-5 w-5 rounded-full bg-purple-500/30 flex items-center justify-center text-[10px]">
-                        👤
-                      </span>
-                      <span>{msg.name}</span>
-                    </div>
+                    <span>{msg.name}</span>
                     <span className="text-[10px] text-white/40 font-mono">
                       {new Date(msg.createdAt).toLocaleTimeString([], {
                         hour: "2-digit",
@@ -1189,7 +1044,7 @@ export default function VirtualCampus({
                       })}
                     </span>
                   </div>
-                  <div className="text-white/90 break-words pl-6">{msg.text}</div>
+                  <div className="text-white/90 break-words">{msg.text}</div>
                 </div>
               ))
             )}

@@ -30,24 +30,24 @@ export default function RpgMissionModal({ onClose, teamSlug = "pesquisa" }: Prop
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-      <div className="w-full max-w-2xl rounded-3xl border-2 border-purple-500/50 bg-[#182333] p-6 text-white shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 pointer-events-auto">
+      <div className="w-full max-w-2xl rounded-3xl border border-purple-500/40 bg-[#182333]/90 p-6 text-white shadow-2xl backdrop-blur-md overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-4">
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-purple-600/30 text-xl border border-purple-400">
-              🗡️
-            </span>
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-purple-600/30 text-purple-300 border border-purple-400 font-bold text-sm">
+              RPG
+            </div>
             <div>
-              <h2 className="font-extrabold text-lg">Modo RPG 2D · Missão da Equipe {teamSlug.toUpperCase()}</h2>
-              <p className="text-xs text-purple-300">Desafio Carbono Zero · Feira de Ciências Colégio 24 de Maio</p>
+              <h2 className="font-extrabold text-lg">Modo RPG 2D - Missão da Equipe {teamSlug.toUpperCase()}</h2>
+              <p className="text-xs text-purple-300">Desafio Carbono Zero - Feira de Ciências Colégio 24 de Maio</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="rounded-full bg-white/10 p-2 text-xs hover:bg-white/20 transition-all"
+            className="rounded-full bg-white/10 px-3 py-1.5 text-xs text-white/80 hover:bg-white/20 transition-all font-semibold"
           >
-            ✖ Fechar
+            Fechar
           </button>
         </div>
 
@@ -55,7 +55,7 @@ export default function RpgMissionModal({ onClose, teamSlug = "pesquisa" }: Prop
         {step === "story" && (
           <div className="space-y-4">
             <div className="rounded-2xl border border-purple-500/30 bg-purple-950/30 p-4 leading-relaxed text-sm">
-              <h3 className="font-bold text-purple-300 mb-2">📜 Capítulo 1: O Desafio da Pegada de Carbono</h3>
+              <h3 className="font-bold text-purple-300 mb-2">Capítulo 1: O Desafio da Pegada de Carbono</h3>
               <p className="text-white/90">
                 Sua equipe precisa definir como o aplicativo da feira irá calcular a economia de carbono gerada pelo transporte dos alunos.
                 O tempo é curto e a comissão avaliadora da Ubongo aguarda o relatório de especificação inicial.
@@ -77,7 +77,7 @@ export default function RpgMissionModal({ onClose, teamSlug = "pesquisa" }: Prop
               onClick={() => setStep("choice")}
               className="w-full rounded-2xl bg-purple-600 py-3.5 font-extrabold text-white hover:bg-purple-500 transition-all shadow-lg active:scale-95 text-sm"
             >
-              Avançar para Decisão da Equipe ➔
+              Avançar para Decisão da Equipe
             </button>
           </div>
         )}
@@ -85,7 +85,7 @@ export default function RpgMissionModal({ onClose, teamSlug = "pesquisa" }: Prop
         {/* Step 2: Decision Tree */}
         {step === "choice" && (
           <div className="space-y-4">
-            <h3 className="font-bold text-sm text-purple-300">🤔 Escolha a Decisão Técnica da Sua Equipe:</h3>
+            <h3 className="font-bold text-sm text-purple-300">Escolha a Decisão Técnica da Sua Equipe:</h3>
 
             <div className="space-y-3">
               <button
@@ -122,7 +122,7 @@ export default function RpgMissionModal({ onClose, teamSlug = "pesquisa" }: Prop
               onClick={() => setStep("submission")}
               className="w-full rounded-2xl bg-purple-600 py-3.5 font-extrabold text-white hover:bg-purple-500 disabled:opacity-50 transition-all shadow-lg text-sm"
             >
-              Confirmar Escolha e Preparar Entrega ➔
+              Confirmar Escolha e Preparar Entrega
             </button>
           </div>
         )}
@@ -130,7 +130,7 @@ export default function RpgMissionModal({ onClose, teamSlug = "pesquisa" }: Prop
         {/* Step 3: Submission & Deliverable */}
         {step === "submission" && (
           <div className="space-y-4">
-            <h3 className="font-bold text-sm text-purple-300">📝 Redigir Entregável da Missão:</h3>
+            <h3 className="font-bold text-sm text-purple-300">Redigir Entregável da Missão:</h3>
 
             <div>
               <label className="text-xs text-white/60 font-bold block mb-1">
@@ -145,7 +145,6 @@ export default function RpgMissionModal({ onClose, teamSlug = "pesquisa" }: Prop
               />
             </div>
 
-            {/* File Upload Simulation */}
             <div>
               <label className="text-xs text-white/60 font-bold block mb-1">
                 Anexar Arquivo de Evidência (PDF, PNG, ZIP):
@@ -161,7 +160,7 @@ export default function RpgMissionModal({ onClose, teamSlug = "pesquisa" }: Prop
                   htmlFor="file-upload"
                   className="cursor-pointer rounded-xl bg-white/10 px-3 py-1.5 text-xs font-bold text-white hover:bg-white/20"
                 >
-                  📁 Selecionar Arquivo
+                  Selecionar Arquivo
                 </label>
                 <span className="text-xs text-white/60 font-mono">
                   {fileName || "Nenhum arquivo selecionado"}
@@ -174,7 +173,7 @@ export default function RpgMissionModal({ onClose, teamSlug = "pesquisa" }: Prop
               onClick={handleSubmit}
               className="w-full rounded-2xl bg-emerald-600 py-3.5 font-extrabold text-white hover:bg-emerald-500 disabled:opacity-50 transition-all shadow-lg text-sm flex items-center justify-center gap-2"
             >
-              {isSubmitting ? "Enviando para Ubongo..." : "🚀 Submeter Entregável para Aprovação"}
+              {isSubmitting ? "Enviando para Ubongo..." : "Submeter Entregável para Aprovação"}
             </button>
           </div>
         )}
@@ -182,8 +181,7 @@ export default function RpgMissionModal({ onClose, teamSlug = "pesquisa" }: Prop
         {/* Step 4: Mission Completed */}
         {step === "completed" && (
           <div className="text-center py-6 space-y-4">
-            <div className="text-5xl">🎉</div>
-            <h3 className="text-2xl font-extrabold text-emerald-400">Entregável Submetido com Sucesso!</h3>
+            <h3 className="text-2xl font-extrabold text-emerald-400">Entregável Submetido com Sucesso</h3>
             <p className="text-xs text-white/70 max-w-md mx-auto">
               Sua entrega foi enviada para o painel de revisão dos Professores e da comissão da Ubongo.
               Você recebeu <span className="text-amber-400 font-bold">+250 XP</span> para sua equipe!
