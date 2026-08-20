@@ -13,6 +13,13 @@ interface Props {
   onNiaInteract?: () => void;
 }
 
+interface PlayerTarget {
+  name: string;
+  role: string;
+  team: string;
+  isNia?: boolean;
+}
+
 const doors = [
   { label: "Missões Criativas", team: "design", x: 250, y: 180 },
   { label: "Missões das Descobertas", team: "pesquisa", x: 720, y: 180 },
@@ -32,6 +39,15 @@ const meetingSeats = [
   { x: 870, y: 420 },
 ];
 
+const npcList: (PlayerTarget & { x: number; y: number })[] = [
+  { name: "NIA", role: "IA Ubongo", team: "ubongo", isNia: true, x: 650, y: 850 },
+  { name: "Charles", role: "Ubongo Admin", team: "ubongo", x: 1075, y: 510 },
+  { name: "Prietto", role: "Ubongo Admin", team: "ubongo", x: 1175, y: 510 },
+  { name: "Dandara", role: "Ubongo Admin", team: "ubongo", x: 1275, y: 510 },
+  { name: "Prof. Niltes", role: "Professora", team: "professores", x: 790, y: 190 },
+  { name: "Prof. Diego", role: "Professor", team: "professores", x: 900, y: 190 },
+];
+
 function avatar(
   scene: Phaser.Scene,
   x: number,
@@ -42,6 +58,11 @@ function avatar(
 ) {
   const c = scene.add.container(x, y);
   const skin = skinTone;
+
+  const waves = scene.add.graphics();
+  waves.setName("speakingWaves");
+  waves.setVisible(false);
+
   c.add([
     scene.add.ellipse(0, 15, 28, 8, 0x263238, 0.38),
     scene.add.rectangle(-5, 12, 5, 10, 0x26364b),
@@ -54,6 +75,7 @@ function avatar(
     scene.add.rectangle(-8, -13, 4, 7, 0x3d2732),
     scene.add.rectangle(-5, -9, 2, 2, 0x182333),
     scene.add.rectangle(4, -9, 2, 2, 0x182333),
+    waves,
     scene
       .add.text(0, -37, name, {
         fontFamily: "monospace",
@@ -64,6 +86,23 @@ function avatar(
       })
       .setOrigin(0.5),
   ]);
+
+  (c as unknown as { setSpeaking: (speaking: boolean) => void }).setSpeaking = (
+    speaking: boolean
+  ) => {
+    waves.clear();
+    if (speaking) {
+      const t = (scene.time.now % 700) / 700;
+      waves.lineStyle(2, 0x10b981, 1 - t);
+      waves.strokeCircle(0, -40, 8 + t * 16);
+      waves.lineStyle(2, 0x3b82f6, 1 - ((t + 0.5) % 1));
+      waves.strokeCircle(0, -40, 8 + ((t + 0.5) % 1) * 16);
+      waves.setVisible(true);
+    } else {
+      waves.setVisible(false);
+    }
+  };
+
   return c;
 }
 
@@ -76,19 +115,32 @@ export default function VirtualCampus({
 }: Props) {
   const mountRef = useRef<HTMLDivElement>(null);
   const joystickRef = useRef({ x: 0, y: 0 });
-  const promptRef = useRef("Explore o Office · aproxime-se de uma porta ou pessoa · use WASD/Setas ou clique no mapa");
+  const promptRef = useRef("Explore o Office · aproxime-se de uma pessoa para conversar");
   const [prompt, setPrompt] = useState(promptRef.current);
   const [online, setOnline] = useState(1);
+
+  // HUD Social State
   const [micOn, setMicOn] = useState(false);
   const [audioOn, setAudioOn] = useState(true);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  // Chat Contextual State
   const [chatOpen, setChatOpen] = useState(false);
+  const [chatTab, setChatTab] = useState<"area" | "team" | "meeting">("area");
   const [chatText, setChatText] = useState("");
   const [chatMessages, setChatMessages] = useState(() =>
     typeof window === "undefined" ? [] : getChat("area").slice(-20)
   );
-  const micStream = useRef<MediaStream | null>(null);
 
-  // Store props in refs so useEffect never destroys game on prop changes
+  // Player Proximity / Interaction State
+  const [nearbyTarget, setNearbyTarget] = useState<PlayerTarget | null>(null);
+  const [interactionModal, setInteractionModal] = useState<PlayerTarget | null>(null);
+
+  const micStream = useRef<MediaStream | null>(null);
+  const micOnRef = useRef(false);
+  const isSpeakingRef = useRef(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
+
   const propsRef = useRef({ displayName, role, teamSlug, userId, onNiaInteract });
   useEffect(() => {
     propsRef.current = { displayName, role, teamSlug, userId, onNiaInteract };
@@ -101,19 +153,32 @@ export default function VirtualCampus({
     }
   };
 
+  // Synchronize chat messages when tab changes
+  useEffect(() => {
+    const roomId =
+      chatTab === "area" ? "area" : chatTab === "team" ? `team-${teamSlug}` : "meeting";
+    setChatMessages(getChat(roomId).slice(-30));
+  }, [chatTab, teamSlug]);
+
   const sendMessage = () => {
     if (!chatText.trim()) return;
-    sendChatMessage("area", userId, displayName, chatText.trim());
+    const roomId =
+      chatTab === "area" ? "area" : chatTab === "team" ? `team-${teamSlug}` : "meeting";
+    sendChatMessage(roomId, userId, displayName, chatText.trim());
     setChatText("");
-    setChatMessages(getChat("area").slice(-20));
+    setChatMessages(getChat(roomId).slice(-30));
   };
 
+  // Toggle Microphone (Independent Control)
   const toggleMic = async () => {
     if (micOn) {
       micStream.current?.getTracks().forEach((track) => {
         track.enabled = false;
       });
       setMicOn(false);
+      micOnRef.current = false;
+      setIsSpeaking(false);
+      isSpeakingRef.current = false;
       return;
     }
     try {
@@ -122,18 +187,61 @@ export default function VirtualCampus({
         track.enabled = true;
       });
       setMicOn(true);
+      micOnRef.current = true;
+
+      // Web Audio API speech detection
+      try {
+        const AudioContextClass =
+          window.AudioContext ||
+          (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        audioContextRef.current = new AudioContextClass();
+        const source = audioContextRef.current.createMediaStreamSource(micStream.current);
+        const analyser = audioContextRef.current.createAnalyser();
+        analyser.fftSize = 256;
+        source.connect(analyser);
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+        const checkVolume = () => {
+          if (!micOnRef.current || !micStream.current) {
+            setIsSpeaking(false);
+            isSpeakingRef.current = false;
+            return;
+          }
+          analyser.getByteFrequencyData(dataArray);
+          let sum = 0;
+          for (let i = 0; i < dataArray.length; i++) {
+            sum += dataArray[i];
+          }
+          const avg = sum / dataArray.length;
+          const speaking = avg > 12;
+          setIsSpeaking(speaking);
+          isSpeakingRef.current = speaking;
+          requestAnimationFrame(checkVolume);
+        };
+        checkVolume();
+      } catch {
+        // Fallback: indicate mic is active without spectral analysis
+        setIsSpeaking(true);
+        isSpeakingRef.current = true;
+      }
     } catch {
       safeSetPrompt("Microfone bloqueado · conceda permissão no navegador para falar");
     }
   };
 
+  // Toggle Audio Listening (Independent Control)
   const toggleAudio = () => setAudioOn((value) => !value);
 
   useEffect(() => {
     if (!mountRef.current) return;
     const network = new MultiplayerClient();
-    const remotes = new Map<string, Phaser.GameObjects.Container>();
-    let local: Phaser.GameObjects.Container | undefined;
+    const remotes = new Map<
+      string,
+      Phaser.GameObjects.Container & { setSpeaking?: (speaking: boolean) => void }
+    >();
+    let local:
+      | (Phaser.GameObjects.Container & { setSpeaking?: (speaking: boolean) => void })
+      | undefined;
     let seated = false;
     let occupiedSeat: { x: number; y: number } | undefined;
     let lastMoveTime = 0;
@@ -277,7 +385,12 @@ export default function VirtualCampus({
         this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
           if (seated) return;
           const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-          if (worldPoint.x >= 40 && worldPoint.x <= 1490 && worldPoint.y >= 50 && worldPoint.y <= 970) {
+          if (
+            worldPoint.x >= 40 &&
+            worldPoint.x <= 1490 &&
+            worldPoint.y >= 50 &&
+            worldPoint.y <= 970
+          ) {
             targetPos = { x: worldPoint.x, y: worldPoint.y };
           }
         });
@@ -430,6 +543,20 @@ export default function VirtualCampus({
           safeSetPrompt("Você levantou");
           return;
         }
+
+        // Check nearby NPC / Avatar
+        const targetNpc = npcList.find(
+          (npc) => Phaser.Math.Distance.Between(local!.x, local!.y, npc.x, npc.y) < 80
+        );
+        if (targetNpc) {
+          if (targetNpc.isNia) {
+            propsRef.current.onNiaInteract?.();
+          } else {
+            setInteractionModal(targetNpc);
+          }
+          return;
+        }
+
         const seat = meetingSeats.find(
           (item) => Phaser.Math.Distance.Between(local!.x, local!.y, item.x, item.y) < 44
         );
@@ -440,10 +567,7 @@ export default function VirtualCampus({
           safeSetPrompt("E — Levantar");
           return;
         }
-        if (Phaser.Math.Distance.Between(local.x, local.y, this.nia.x, this.nia.y) < 80) {
-          propsRef.current.onNiaInteract?.();
-          return;
-        }
+
         const d = doors.find(
           (v) => Phaser.Math.Distance.Between(local!.x, local!.y, v.x, v.y) < 115
         );
@@ -458,13 +582,18 @@ export default function VirtualCampus({
       update(time: number, delta: number) {
         if (!local) return;
 
+        // Render speaking wave animation on local avatar
+        if (local.setSpeaking) {
+          local.setSpeaking(isSpeakingRef.current);
+        }
+
         if (seated && occupiedSeat) {
           local.setPosition(occupiedSeat.x, occupiedSeat.y);
           safeSetPrompt("E — Levantar");
           return;
         }
 
-        // Automatic unstick algorithm: if player is inside a wall boundary, push outward
+        // Automatic unstick algorithm: push out if inside wall
         if (this.blocked(local.x, local.y)) {
           for (let offset = 2; offset <= 30; offset += 2) {
             if (!this.blocked(local.x, local.y + offset)) {
@@ -490,7 +619,7 @@ export default function VirtualCampus({
         const oy = local.y;
         let dir = "down";
 
-        // Delta-based movement speed (260 pixels per second)
+        // Movement step (260 px/s)
         const moveStep = (260 * delta) / 1000;
         const j = joystickRef.current;
         let dx = 0;
@@ -517,7 +646,7 @@ export default function VirtualCampus({
           targetPos = null;
         }
 
-        // Pointer click-to-move target processing
+        // Pointer click-to-move
         if (dx === 0 && dy === 0 && targetPos) {
           const dist = Phaser.Math.Distance.Between(local.x, local.y, targetPos.x, targetPos.y);
           if (dist < 6) {
@@ -534,7 +663,7 @@ export default function VirtualCampus({
           }
         }
 
-        // Predictive collision sliding: check X and Y separately
+        // Predictive sliding collision check
         if (dx !== 0) {
           const nextX = Phaser.Math.Clamp(local.x + dx, 40, 1490);
           if (!this.blocked(nextX, local.y)) {
@@ -552,7 +681,7 @@ export default function VirtualCampus({
           }
         }
 
-        // Throttled network updates (max 25 updates / sec)
+        // Throttled network update
         if ((local.x !== ox || local.y !== oy) && time - lastMoveTime > 40) {
           lastMoveTime = time;
           network.sendMove(local.x, local.y, dir);
@@ -601,25 +730,32 @@ export default function VirtualCampus({
           }
         }
 
-        // Proximity prompts
-        const nearbySeat = meetingSeats.find(
-          (item) => Phaser.Math.Distance.Between(local!.x, local!.y, item.x, item.y) < 44
+        // Proximity prompts & target tracking
+        const targetNpc = npcList.find(
+          (npc) => Phaser.Math.Distance.Between(local!.x, local!.y, npc.x, npc.y) < 80
         );
-        if (nearbySeat) {
-          safeSetPrompt("E — Sentar");
-        } else if (Phaser.Math.Distance.Between(local.x, local.y, this.nia.x, this.nia.y) < 80) {
-          safeSetPrompt("E — Falar com a NIA");
+        if (targetNpc) {
+          setNearbyTarget(targetNpc);
+          safeSetPrompt(`E — CONVERSAR COM ${targetNpc.name.toUpperCase()}`);
         } else {
-          const d = doors.find(
-            (v) => Phaser.Math.Distance.Between(local!.x, local!.y, v.x, v.y) < 115
+          setNearbyTarget(null);
+          const nearbySeat = meetingSeats.find(
+            (item) => Phaser.Math.Distance.Between(local!.x, local!.y, item.x, item.y) < 44
           );
-          safeSetPrompt(
-            d
-              ? canEnter(d.team, propsRef.current.role, propsRef.current.teamSlug)
-                ? `E — Entrar em ${d.label}`
-                : `Missão exclusiva da Equipe ${d.team}`
-              : "Explore o Office · aproxime-se de uma porta ou pessoa · use WASD/Setas ou clique no mapa"
-          );
+          if (nearbySeat) {
+            safeSetPrompt("E — Sentar");
+          } else {
+            const d = doors.find(
+              (v) => Phaser.Math.Distance.Between(local!.x, local!.y, v.x, v.y) < 115
+            );
+            safeSetPrompt(
+              d
+                ? canEnter(d.team, propsRef.current.role, propsRef.current.teamSlug)
+                  ? `E — Entrar em ${d.label}`
+                  : `Missão exclusiva da Equipe ${d.team}`
+                : "Explore o Office · aproxime-se de uma pessoa · use WASD/Setas ou clique no mapa"
+            );
+          }
         }
       }
     }
@@ -638,10 +774,11 @@ export default function VirtualCampus({
 
     return () => {
       micStream.current?.getTracks().forEach((track) => track.stop());
+      audioContextRef.current?.close();
       void network.leave();
       game.destroy(true);
     };
-  }, []); // Run ONCE on mount, props accessed via propsRef
+  }, []);
 
   const key = (value: string) => window.dispatchEvent(new KeyboardEvent("keydown", { key: value }));
   const setJoystick = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -658,35 +795,236 @@ export default function VirtualCampus({
   return (
     <div className="relative h-full min-h-[560px] w-full overflow-hidden rounded-2xl border-4 border-[#315f4c] bg-[#92cba8]">
       <div ref={mountRef} className="absolute inset-0" />
-      <div className="absolute right-3 top-3 flex items-center gap-2 rounded-xl bg-[#182333]/90 px-3 py-2 text-xs text-white shadow-lg">
-        <span>{online} online</span>
-        <span>mundo compartilhado</span>
-        <button aria-label="microfone" onClick={toggleMic}>
-          {micOn ? "MIC" : "MIC off"}
+
+      {/* PERMANENT SOCIAL HUD (Desktop & Mobile) */}
+      <div className="absolute right-3 top-3 flex flex-wrap items-center gap-2 rounded-2xl border border-white/20 bg-[#182333]/90 p-2 text-xs font-semibold text-white shadow-2xl backdrop-blur-md">
+        {/* Online Status */}
+        <div className="flex items-center gap-1.5 rounded-xl bg-white/10 px-2.5 py-1.5">
+          <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span>{online} Online</span>
+        </div>
+
+        {/* Microphone Toggle Control */}
+        <button
+          aria-label="Controle de Microfone"
+          onClick={toggleMic}
+          className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 font-bold transition-all ${
+            micOn
+              ? "bg-emerald-600/30 text-emerald-300 border border-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.3)]"
+              : "bg-rose-950/40 text-rose-400 border border-rose-500/30 hover:bg-rose-900/50"
+          }`}
+        >
+          <span>{micOn ? "🎤 Mic: LIGADO" : "🎙️ Mic: MUTADO"}</span>
+          {isSpeaking && <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />}
         </button>
-        <button aria-label="áudio" onClick={toggleAudio}>
-          {audioOn ? "ÁUDIO" : "ÁUDIO off"}
+
+        {/* Audio Listening Control */}
+        <button
+          aria-label="Controle de Áudio"
+          onClick={toggleAudio}
+          className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 font-bold transition-all ${
+            audioOn
+              ? "bg-blue-600/30 text-blue-300 border border-blue-500/50"
+              : "bg-amber-950/40 text-amber-400 border border-amber-500/30 hover:bg-amber-900/50"
+          }`}
+        >
+          <span>{audioOn ? "🔊 Áudio: OUVINDO" : "🔇 Áudio: SILENCIADO"}</span>
         </button>
-        <button aria-label="chat" onClick={() => setChatOpen((value) => !value)}>
-          CHAT
+
+        {/* Chat Toggle Control */}
+        <button
+          aria-label="Painel de Chat"
+          onClick={() => setChatOpen((prev) => !prev)}
+          className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 font-bold transition-all ${
+            chatOpen
+              ? "bg-purple-600 text-white shadow-lg"
+              : "bg-purple-950/40 text-purple-300 border border-purple-500/30 hover:bg-purple-900/50"
+          }`}
+        >
+          <span>💬 Chat</span>
         </button>
       </div>
-      <div className="absolute bottom-4 left-4 rounded-xl bg-[#182333]/90 px-4 py-2 text-sm font-bold text-white shadow-lg">
-        {prompt}
-      </div>
-      {chatOpen && (
-        <div className="absolute right-3 top-14 w-64 rounded-xl border border-white/20 bg-[#182333]/95 p-3 text-xs text-white shadow-xl">
-          <div className="mb-2 font-bold">CHAT CONTEXTUAL</div>
-          <div className="mb-3 flex gap-2">
-            <button className="rounded bg-white/15 px-2 py-1">Área</button>
-            <button className="rounded bg-white/15 px-2 py-1">Equipe</button>
-            <button className="rounded bg-white/15 px-2 py-1">Reunião</button>
+
+      {/* PROXIMITY INTERACTION BANNER (Desktop & Mobile) */}
+      {nearbyTarget && (
+        <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 rounded-2xl border-2 border-[#8ee85f] bg-[#182333]/95 px-5 py-3 text-white shadow-2xl backdrop-blur-md animate-bounce">
+          <div className="flex flex-col">
+            <span className="text-xs text-[#8ee85f] font-mono uppercase tracking-wider">
+              Pessoa Próxima
+            </span>
+            <span className="font-bold text-sm">
+              {nearbyTarget.name} • {nearbyTarget.role}
+            </span>
           </div>
-          <div className="text-white/70">
-            Aproxime-se de alguém para conversar. Mensagens privadas entre alunos estão desativadas.
+          <button
+            onClick={() => {
+              if (nearbyTarget.isNia) {
+                propsRef.current.onNiaInteract?.();
+              } else {
+                setInteractionModal(nearbyTarget);
+              }
+            }}
+            className="rounded-xl bg-[#8ee85f] px-4 py-2 text-xs font-extrabold text-[#10160e] shadow-lg hover:bg-[#a6f07b] transition-transform active:scale-95"
+          >
+            [ CONVERSAR COM {nearbyTarget.name.toUpperCase()} ]
+          </button>
+        </div>
+      )}
+
+      {/* PLAYER INTERACTION MODAL / CARD */}
+      {interactionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-3xl border-2 border-emerald-500/40 bg-[#182333] p-6 text-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-emerald-500/20 border border-emerald-400 flex items-center justify-center text-lg">
+                  👤
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">{interactionModal.name}</h3>
+                  <p className="text-xs text-emerald-400 font-mono">{interactionModal.role}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setInteractionModal(null)}
+                className="rounded-full bg-white/10 p-1.5 text-xs text-white/70 hover:bg-white/20"
+              >
+                ✖
+              </button>
+            </div>
+
+            <div className="my-4 space-y-2 text-xs text-white/80">
+              <div className="flex justify-between rounded-xl bg-white/5 p-2.5">
+                <span className="text-white/50">Equipe / Setor:</span>
+                <span className="font-bold text-white uppercase">{interactionModal.team}</span>
+              </div>
+              <div className="flex justify-between rounded-xl bg-white/5 p-2.5">
+                <span className="text-white/50">AudioZone:</span>
+                <span className="font-bold text-emerald-400">Ativa (Área Central)</span>
+              </div>
+            </div>
+
+            <div className="space-y-2 pt-2">
+              <button
+                onClick={() => {
+                  if (!micOn) toggleMic();
+                  setInteractionModal(null);
+                }}
+                className="w-full rounded-xl bg-emerald-600 py-2.5 text-xs font-bold text-white shadow-lg hover:bg-emerald-500 active:scale-95 transition-all"
+              >
+                🎤 Iniciar / Entrar na Conversa por Voz
+              </button>
+              <button
+                onClick={() => {
+                  setChatOpen(true);
+                  setInteractionModal(null);
+                }}
+                className="w-full rounded-xl bg-purple-600 py-2.5 text-xs font-bold text-white shadow-lg hover:bg-purple-500 active:scale-95 transition-all"
+              >
+                💬 Enviar Mensagem no Chat
+              </button>
+            </div>
           </div>
         </div>
       )}
+
+      {/* BOTTOM PROMPT BAR */}
+      <div className="absolute bottom-4 left-4 rounded-xl bg-[#182333]/90 px-4 py-2 text-sm font-bold text-white shadow-lg border border-white/10">
+        {prompt}
+      </div>
+
+      {/* CONTEXTUAL CHAT PANEL */}
+      {chatOpen && (
+        <div className="absolute right-3 top-16 w-80 max-w-[90vw] rounded-2xl border border-white/20 bg-[#182333]/95 p-4 text-xs text-white shadow-2xl backdrop-blur-xl z-30">
+          <div className="mb-3 flex items-center justify-between border-b border-white/10 pb-2">
+            <span className="font-bold text-sm tracking-wide text-purple-300">💬 CHAT CONTEXTUAL</span>
+            <button
+              onClick={() => setChatOpen(false)}
+              className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-white/70 hover:bg-white/20"
+            >
+              ✖
+            </button>
+          </div>
+
+          {/* CHAT CHANNELS TABS */}
+          <div className="mb-3 flex gap-1 rounded-xl bg-black/30 p-1">
+            <button
+              onClick={() => setChatTab("area")}
+              className={`flex-1 rounded-lg py-1.5 font-bold transition-all ${
+                chatTab === "area" ? "bg-purple-600 text-white shadow" : "text-white/60 hover:text-white"
+              }`}
+            >
+              🌐 ÁREA
+            </button>
+            <button
+              onClick={() => setChatTab("team")}
+              className={`flex-1 rounded-lg py-1.5 font-bold transition-all ${
+                chatTab === "team" ? "bg-purple-600 text-white shadow" : "text-white/60 hover:text-white"
+              }`}
+            >
+              🛡️ EQUIPE
+            </button>
+            <button
+              onClick={() => setChatTab("meeting")}
+              className={`flex-1 rounded-lg py-1.5 font-bold transition-all ${
+                chatTab === "meeting" ? "bg-purple-600 text-white shadow" : "text-white/60 hover:text-white"
+              }`}
+            >
+              👥 REUNIÃO
+            </button>
+          </div>
+
+          {/* CHAT MESSAGES DISPLAY */}
+          <div className="mb-3 h-48 overflow-y-auto space-y-2 rounded-xl bg-black/20 p-2.5 border border-white/5">
+            {chatMessages.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-white/40 italic">
+                Nenhuma mensagem neste canal ainda.
+              </div>
+            ) : (
+              chatMessages.map((msg) => (
+                <div key={msg.id} className="rounded-lg bg-white/5 p-2">
+                  <div className="flex justify-between font-bold text-[#8ee85f] mb-0.5">
+                    <span>{msg.name}</span>
+                    <span className="text-[10px] text-white/40">
+                      {new Date(msg.createdAt).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </div>
+                  <div className="text-white/90 break-words">{msg.text}</div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* CHAT INPUT FORM */}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              placeholder={`Mensagem em ${
+                chatTab === "area" ? "Área" : chatTab === "team" ? "Equipe" : "Reunião"
+              }...`}
+              value={chatText}
+              onChange={(e) => setChatText(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+              className="flex-1 rounded-xl border border-white/20 bg-black/40 px-3 py-2 text-xs text-white placeholder-white/40 focus:border-purple-400 focus:outline-none"
+            />
+            <button
+              onClick={sendMessage}
+              className="rounded-xl bg-purple-600 px-3 py-2 font-bold text-white hover:bg-purple-500 active:scale-95 transition-all"
+            >
+              Enviar
+            </button>
+          </div>
+
+          <div className="mt-2 text-[10px] text-white/50 text-center">
+            🔒 Mensagens privadas entre alunos desativadas nesta versão.
+          </div>
+        </div>
+      )}
+
+      {/* MOBILE TOUCH CONTROLS */}
       <div className="absolute bottom-5 left-5 sm:hidden">
         <div
           className="relative h-28 w-28 touch-none rounded-full border border-white/30 bg-[#182333]/35"
@@ -701,7 +1039,7 @@ export default function VirtualCampus({
       </div>
       <button
         aria-label="interagir"
-        className="absolute bottom-8 right-8 h-16 w-16 rounded-full border border-white/30 bg-[#8ee85f] font-bold text-[#10160e] shadow-xl sm:hidden"
+        className="absolute bottom-8 right-8 h-16 w-16 rounded-full border border-white/30 bg-[#8ee85f] font-bold text-[#10160e] shadow-xl sm:hidden active:scale-95 transition-transform"
         onClick={() => key("e")}
       >
         E
