@@ -44,6 +44,7 @@ const meetingSeats = [
   { x: 870, y: 420 },
 ];
 
+// Ubongo Admins: Matheus, Prietto, Dandara
 const npcList: (PlayerTarget & { x: number; y: number })[] = [
   { name: "NIA", role: "IA Ubongo", team: "ubongo", isNia: true, x: 650, y: 850 },
   { name: "Matheus", role: "Ubongo Admin", team: "ubongo", x: 1150, y: 560 },
@@ -102,7 +103,7 @@ function avatar(
   let zzzText: Phaser.GameObjects.Text | null = null;
   if (isOffline) {
     zzzText = scene.add.text(0, -48, "Zzz...", {
-      fontFamily: "sans-serif",
+      fontFamily: "monospace",
       fontSize: "10px",
       color: "#93c5fd",
     }).setOrigin(0.5);
@@ -123,7 +124,7 @@ function avatar(
     waves,
     scene
       .add.text(0, -32, name + (isOffline ? " (Zzz)" : ""), {
-        fontFamily: "sans-serif",
+        fontFamily: "monospace",
         fontSize: "11px",
         color: isOffline ? "#64748b" : "#182333",
         backgroundColor: isOffline ? "#e2e8f0" : "#fff8df",
@@ -164,6 +165,13 @@ export default function VirtualCampus({
 }: Props) {
   const mountRef = useRef<HTMLDivElement>(null);
   const joystickRef = useRef({ x: 0, y: 0 });
+  const keyStateRef = useRef<{ left: boolean; right: boolean; up: boolean; down: boolean }>({
+    left: false,
+    right: false,
+    up: false,
+    down: false,
+  });
+
   const promptRef = useRef("Use as setas/WASD ou clique no mapa para andar. Aproxime-se dos objetos para interagir (E).");
   const [prompt, setPrompt] = useState(promptRef.current);
   const [online, setOnline] = useState(1);
@@ -199,6 +207,32 @@ export default function VirtualCampus({
   useEffect(() => {
     propsRef.current = { displayName, role, teamSlug, userId, onNiaInteract };
   }, [displayName, role, teamSlug, userId, onNiaInteract]);
+
+  // Global Keyboard Event Listener to guarantee Arrow Keys / WASD movement 100% of the time
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const k = e.key.toLowerCase();
+      if (k === "arrowleft" || k === "a") keyStateRef.current.left = true;
+      if (k === "arrowright" || k === "d") keyStateRef.current.right = true;
+      if (k === "arrowup" || k === "w") keyStateRef.current.up = true;
+      if (k === "arrowdown" || k === "s") keyStateRef.current.down = true;
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      const k = e.key.toLowerCase();
+      if (k === "arrowleft" || k === "a") keyStateRef.current.left = false;
+      if (k === "arrowright" || k === "d") keyStateRef.current.right = false;
+      if (k === "arrowup" || k === "w") keyStateRef.current.up = false;
+      if (k === "arrowdown" || k === "s") keyStateRef.current.down = false;
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, []);
 
   const safeSetPrompt = (msg: string) => {
     if (promptRef.current !== msg) {
@@ -332,10 +366,7 @@ export default function VirtualCampus({
     class OfficeScene extends Phaser.Scene {
       cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
       keys!: Record<string, Phaser.Input.Keyboard.Key>;
-      ball!: Phaser.GameObjects.Arc;
       nia!: Phaser.GameObjects.Container;
-      ballVelocity = 0;
-      ballVertical = 0;
 
       constructor() {
         super("OfficeScene");
@@ -360,31 +391,10 @@ export default function VirtualCampus({
         this.drawSoccerField();
         this.drawOfflineStudents();
 
-        this.time.delayedCall(120, () => {
-          this.ball?.setVisible(true).setScale(1.2);
-        });
-
-        this.time.addEvent({
-          delay: 30,
-          loop: true,
-          callback: () => {
-            if (!this.ball?.visible) return;
-            this.ball.x += 2.2;
-            if (this.ball.x > 1420) this.ball.x = 1300;
-          },
-        });
-
         this.nia = avatar(this, 650, 850, 0x8ee85f, "NIA", 0x5a3829);
         this.nia.setDepth(850);
         this.nia.setInteractive(new Phaser.Geom.Rectangle(-20, -40, 40, 60), Phaser.Geom.Rectangle.Contains);
         this.nia.on("pointerdown", () => propsRef.current.onNiaInteract?.());
-
-        // Soccer ball spawn inside the green pitch at x: 1360, y: 780
-        this.ball = this.add
-          .circle(1360, 780, 7, 0xffffff)
-          .setStrokeStyle(2, 0x23302f)
-          .setDepth(780)
-          .setVisible(false);
 
         local = avatar(this, 760, 520, 0xf26b5b, propsRef.current.displayName);
         local.setDepth(520);
@@ -487,7 +497,6 @@ export default function VirtualCampus({
       }
 
       drawCafeteria() {
-        // Direct click trigger on Coffee Machine area without ugly text badges over art
         const coffeeArea = this.add.zone(1280, 120, 80, 60).setOrigin(0.5).setInteractive({ useHandCursor: true });
         coffeeArea.on("pointerdown", () => {
           setHasCoffeeEffect(true);
@@ -495,7 +504,6 @@ export default function VirtualCampus({
         });
       }
 
-      // Interactive Ping Pong Zone on direct click (No ugly text boxes over art!)
       drawPingPongTable() {
         const pingPongZone = this.add.zone(1180, 780, 120, 140).setOrigin(0.5).setInteractive({ useHandCursor: true });
         pingPongZone.on("pointerdown", () => {
@@ -504,7 +512,7 @@ export default function VirtualCampus({
       }
 
       drawSoccerField() {
-        // Interactive Field Zone
+        // Field Click Trigger
       }
 
       drawOfflineStudents() {
@@ -518,16 +526,20 @@ export default function VirtualCampus({
         }
       }
 
+      // Precise Solid Walls & Furniture Collisions (Gather/Habbo style)
       blocked(x: number, y: number) {
-        const r = 5;
-        if (x - r < 35 || x + r > 1500 || y - r < 40 || y + r > 980) {
+        const r = 8;
+        // Outer boundaries
+        if (x - r < 50 || x + r > 1480 || y - r < 60 || y + r > 960) {
           return true;
         }
 
+        // Room Dividers and Solid Furniture
         const furnitureBoxes = [
-          [1120, 480, 300, 40], // Ubongo admin desks
-          [740, 130, 200, 40],  // Teacher desks
-          [1240, 140, 180, 30], // Cafeteria counter
+          [1100, 480, 340, 50], // Ubongo admin desks
+          [730, 130, 220, 50],  // Teacher desks
+          [1220, 120, 200, 40], // Cafeteria counter
+          [500, 410, 400, 50],  // Central meeting table
         ];
 
         return furnitureBoxes.some(
@@ -546,20 +558,17 @@ export default function VirtualCampus({
           return;
         }
 
-        // Check Coffee Counter
         if (Phaser.Math.Distance.Between(local.x, local.y, 1280, 120) < 85) {
           setHasCoffeeEffect(true);
           safeSetPrompt("Efeito Café ativado! Sua velocidade aumentou temporariamente.");
           return;
         }
 
-        // Check Ping Pong Table (x: 1180, y: 780)
         if (Phaser.Math.Distance.Between(local.x, local.y, 1180, 780) < 100) {
           setShowPingPong(true);
           return;
         }
 
-        // Check Computer Desks
         const desk = computerDesks.find(
           (d) => Phaser.Math.Distance.Between(local!.x, local!.y, d.x, d.y) < 70
         );
@@ -568,13 +577,11 @@ export default function VirtualCampus({
           return;
         }
 
-        // Check Meeting Table
         if (Phaser.Math.Distance.Between(local.x, local.y, 650, 420) < 130) {
           setShowMeetingModal(true);
           return;
         }
 
-        // Check NPCs
         const targetNpc = npcList.find(
           (npc) => Phaser.Math.Distance.Between(local!.x, local!.y, npc.x, npc.y) < 85
         );
@@ -625,28 +632,6 @@ export default function VirtualCampus({
           return;
         }
 
-        // Auto-Unstuck safety check
-        if (this.blocked(local.x, local.y)) {
-          for (let offset = 4; offset <= 40; offset += 4) {
-            if (!this.blocked(local.x, local.y + offset)) {
-              local.y += offset;
-              break;
-            }
-            if (!this.blocked(local.x, local.y - offset)) {
-              local.y -= offset;
-              break;
-            }
-            if (!this.blocked(local.x + offset, local.y)) {
-              local.x += offset;
-              break;
-            }
-            if (!this.blocked(local.x - offset, local.y)) {
-              local.x -= offset;
-              break;
-            }
-          }
-        }
-
         const ox = local.x;
         const oy = local.y;
         let dir = "down";
@@ -654,25 +639,27 @@ export default function VirtualCampus({
         const speedMult = hasCoffeeEffect ? 1.4 : 1.0;
         const moveStep = (320 * speedMult * delta) / 1000;
         const j = joystickRef.current;
+        const ks = keyStateRef.current;
+
         let dx = 0;
         let dy = 0;
 
-        if (this.cursors.left.isDown || this.keys.A.isDown || j.x < -0.18) {
+        if (this.cursors.left.isDown || this.keys.A.isDown || ks.left || j.x < -0.18) {
           dx -= moveStep;
           dir = "left";
           targetPos = null;
         }
-        if (this.cursors.right.isDown || this.keys.D.isDown || j.x > 0.18) {
+        if (this.cursors.right.isDown || this.keys.D.isDown || ks.right || j.x > 0.18) {
           dx += moveStep;
           dir = "right";
           targetPos = null;
         }
-        if (this.cursors.up.isDown || this.keys.W.isDown || j.y < -0.18) {
+        if (this.cursors.up.isDown || this.keys.W.isDown || ks.up || j.y < -0.18) {
           dy -= moveStep;
           dir = "up";
           targetPos = null;
         }
-        if (this.cursors.down.isDown || this.keys.S.isDown || j.y > 0.18) {
+        if (this.cursors.down.isDown || this.keys.S.isDown || ks.down || j.y > 0.18) {
           dy += moveStep;
           dir = "down";
           targetPos = null;
@@ -695,7 +682,7 @@ export default function VirtualCampus({
           }
         }
 
-        // True Wall-Sliding Movement
+        // Smooth Wall Sliding Collision Logic
         if (dx !== 0) {
           const nextX = Phaser.Math.Clamp(local.x + dx, 40, 1490);
           if (!this.blocked(nextX, local.y)) {
@@ -716,50 +703,6 @@ export default function VirtualCampus({
           network.sendMove(local.x, local.y, dir);
         }
 
-        // Soccer ball physics at x: 1360, y: 780
-        if (this.ball) {
-          if (Math.abs(this.ballVelocity) + Math.abs(this.ballVertical) > 0.1) {
-            this.ball.x += this.ballVelocity;
-            this.ball.y += this.ballVertical;
-            this.ballVelocity *= 0.985;
-            this.ballVertical *= 0.985;
-            if (this.ball.x > 1460) {
-              this.ball.x = 1460;
-              this.ballVelocity = -Math.abs(this.ballVelocity);
-            }
-            if (this.ball.x < 1260) {
-              this.ball.x = 1260;
-              this.ballVelocity = Math.abs(this.ballVelocity);
-            }
-            if (this.ball.y > 840) {
-              this.ball.y = 840;
-              this.ballVertical = -Math.abs(this.ballVertical);
-            }
-            if (this.ball.y < 700) {
-              this.ball.y = 700;
-              this.ballVertical = Math.abs(this.ballVertical);
-            }
-          } else {
-            this.ballVelocity = 0;
-            this.ballVertical = 0;
-            if (
-              this.ball.x <= 1260 ||
-              this.ball.x >= 1460 ||
-              this.ball.y <= 700 ||
-              this.ball.y >= 840
-            ) {
-              this.ball.x = 1360;
-              this.ball.y = 780;
-            }
-          }
-          if (Phaser.Math.Distance.Between(local.x, local.y, this.ball.x, this.ball.y) < 32) {
-            this.ballVelocity = local.x < this.ball.x ? 4 : -4;
-            this.ballVertical = local.y < this.ball.y ? 2 : -2;
-            safeSetPrompt("Você chutou a bola de futebol!");
-          }
-        }
-
-        // Clean text prompts in the bottom bar only (No obstructive floating pop-ups!)
         if (Phaser.Math.Distance.Between(local.x, local.y, 1280, 120) < 85) {
           safeSetPrompt("Aperte E ou clique para tomar café da Ubongo (Bônus de velocidade)");
           return;
@@ -803,7 +746,7 @@ export default function VirtualCampus({
                 ? d.team === null || d.team === propsRef.current.teamSlug || propsRef.current.role !== "STUDENT"
                   ? `Aperte E para entrar em ${d.label}`
                   : `Missão exclusiva da Equipe ${d.team}`
-                : "Explore o Office · Aproxime-se dos objetos para interagir"
+                : "Explore o Office · Use WASD/Setas para andar e aproxime-se dos objetos para interagir"
             );
           }
         }
@@ -815,9 +758,9 @@ export default function VirtualCampus({
       width: "100%",
       height: "100%",
       parent: mountRef.current,
-      pixelArt: false,
+      pixelArt: true,
       audio: { noAudio: true },
-      render: { antialias: true, roundPixels: true },
+      render: { antialias: false, roundPixels: true },
       scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH },
       scene: OfficeScene,
     });
@@ -1063,7 +1006,7 @@ export default function VirtualCampus({
             />
             <button
               onClick={sendMessage}
-              className="rounded-xl bg-[#10b981] px-3.5 py-2 font-bold text-black hover:bg-[#34d399] active:scale-95 transition-all"
+              className="rounded-xl bg-[#10b981] px-3.5 py-2 font-[#10160e] hover:bg-[#34d399] active:scale-95 transition-all"
             >
               Enviar
             </button>
