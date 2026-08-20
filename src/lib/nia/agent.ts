@@ -1,4 +1,5 @@
 import { OpenAI } from "openai";
+import { prisma } from "@/lib/server/prisma";
 
 export type LLMProvider = "openai" | "qwen";
 
@@ -72,7 +73,37 @@ ${projectContext ?? contextId ?? "Usuário no Office do Missão Construtores"}
   }
 
   private async retrieveKnowledge(query: string) {
-    return "Base de Conhecimento Ubongo: O Missão Construtores possui 5 equipes (Pesquisa, Ideias, Criativa, Guardiões e História). O objetivo final é a construção do aplicativo Carbono Zero para a Feira de Ciências.";
+    if (!this.openaiClient) {
+      return "Base de Conhecimento Ubongo (Offline): O Missão Construtores possui 5 equipes. O objetivo final é a construção do aplicativo Carbono Zero para a Feira de Ciências.";
+    }
+
+    try {
+      // 1. Gera embedding para a query do usuário
+      const response = await this.openaiClient.embeddings.create({
+        model: "text-embedding-3-small",
+        input: query,
+      });
+      const embedding = response.data[0].embedding;
+      const embeddingArray = `[${embedding.join(",")}]`;
+
+      // 2. Busca no PostgreSQL/pgvector usando distância L2
+      const documents: { content: string }[] = await prisma.$queryRaw`
+        SELECT content 
+        FROM "DocumentChunk" 
+        ORDER BY embedding <-> ${embeddingArray}::vector 
+        LIMIT 5;
+      `;
+
+      if (!documents || documents.length === 0) {
+        return "Nenhum contexto de documento adicional encontrado.";
+      }
+
+      // 3. Concatena os chunks recuperados
+      return "Contexto Extraído da Documentação Oficial do Projeto:\n" + documents.map((doc) => doc.content).join("\n\n");
+    } catch (error) {
+      console.error("Erro na recuperação RAG:", error);
+      return "Aviso: Recuperação RAG indisponível no momento.";
+    }
   }
 
   private fallbackEngine(message: string, context?: string): string {

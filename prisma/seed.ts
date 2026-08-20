@@ -20,6 +20,8 @@ const accounts = [
 ] as const;
 
 async function main() {
+  await prisma.$executeRawUnsafe(`CREATE EXTENSION IF NOT EXISTS vector;`);
+
   for (const [slug, name, color, icon] of teams) {
     await prisma.team.upsert({ where: { slug }, update: { name, color, icon }, create: { slug, name, color, icon } });
   }
