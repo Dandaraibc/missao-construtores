@@ -43,21 +43,22 @@ const meetingSeats = [
   { x: 870, y: 420 },
 ];
 
+// Corrected NPC positions inside their respective rooms (not out in hallways)
 const npcList: (PlayerTarget & { x: number; y: number })[] = [
   { name: "NIA", role: "IA Ubongo", team: "ubongo", isNia: true, x: 650, y: 850 },
-  { name: "Charles", role: "Ubongo Admin", team: "ubongo", x: 1075, y: 510 },
-  { name: "Prietto", role: "Ubongo Admin", team: "ubongo", x: 1170, y: 510 },
-  { name: "Dandara", role: "Ubongo Admin", team: "ubongo", x: 1265, y: 510 },
+  { name: "Charles", role: "Ubongo Admin", team: "ubongo", x: 1150, y: 560 },
+  { name: "Prietto", role: "Ubongo Admin", team: "ubongo", x: 1240, y: 560 },
+  { name: "Dandara", role: "Ubongo Admin", team: "ubongo", x: 1330, y: 560 },
   { name: "Prof. Niltes", role: "Professora", team: "professores", x: 790, y: 190 },
   { name: "Prof. Diego", role: "Professor", team: "professores", x: 885, y: 190 },
 ];
 
 const computerDesks = [
-  { x: 1075, y: 470, team: "ubongo", label: "Estação Ubongo Admin (Charles)" },
-  { x: 1170, y: 470, team: "ubongo", label: "Estação Ubongo Admin (Prietto)" },
-  { x: 1265, y: 470, team: "ubongo", label: "Estação Ubongo Admin (Dandara)" },
-  { x: 790, y: 150, team: "professores", label: "Estação Professores (Prof. Niltes)" },
-  { x: 885, y: 150, team: "professores", label: "Estação Professores (Prof. Diego)" },
+  { x: 1150, y: 520, team: "ubongo", label: "Estação Ubongo Admin (Charles)" },
+  { x: 1240, y: 520, team: "ubongo", label: "Estação Ubongo Admin (Prietto)" },
+  { x: 1330, y: 520, team: "ubongo", label: "Estação Ubongo Admin (Dandara)" },
+  { x: 790, y: 160, team: "professores", label: "Estação Professores (Prof. Niltes)" },
+  { x: 885, y: 160, team: "professores", label: "Estação Professores (Prof. Diego)" },
   { x: 250, y: 150, team: "design", label: "Estação Equipe Criativa (Design)" },
   { x: 720, y: 150, team: "pesquisa", label: "Estação Equipe Descobertas (Pesquisa)" },
   { x: 1020, y: 150, team: "produto", label: "Estação Equipe Ideias (Produto)" },
@@ -516,15 +517,14 @@ export default function VirtualCampus({
           );
       }
 
-      // NO DUPLICATE RECTANGLES DRAWN OVER THE MAP ARTWORK
       drawBongoRoom() {
         for (const [x, name, shirt, skin] of [
-          [1075, "Charles", 0x3d9b78, 0x6b422f],
-          [1170, "Prietto", 0x6b5fc4, 0x8a5a3b],
-          [1265, "Dandara", 0x8ee85f, 0x5a3829],
+          [1150, "Charles", 0x3d9b78, 0x6b422f],
+          [1240, "Prietto", 0x6b5fc4, 0x8a5a3b],
+          [1330, "Dandara", 0x8ee85f, 0x5a3829],
         ] as [number, string, number, number][]) {
-          const member = avatar(this, x, 510, shirt, name, skin);
-          member.setDepth(510);
+          const member = avatar(this, x, 560, shirt, name, skin);
+          member.setDepth(560);
         }
       }
 
@@ -549,9 +549,9 @@ export default function VirtualCampus({
           })
           .setDepth(4);
 
-        // Clickable Coffee Machine Trigger
+        // Clickable Coffee Machine Trigger placed neatly in Cafeteria
         const coffeeBtn = this.add
-          .text(1330, 180, "☕ TOMAR CAFÉ DA UBONGO [ CLIQUE ]", {
+          .text(1280, 120, "☕ CAFÉ DA UBONGO [ CLIQUE ]", {
             fontFamily: "monospace",
             fontSize: "11px",
             color: "#10b981",
@@ -568,7 +568,6 @@ export default function VirtualCampus({
         });
       }
 
-      // Ping Pong Table label placed cleanly over artwork table at x: 1180, y: 740
       drawPingPongTable() {
         const pingPongText = this.add
           .text(1180, 740, "🏓 PING-PONG 2D [ JOGAR ]", {
@@ -587,7 +586,6 @@ export default function VirtualCampus({
         });
       }
 
-      // Soccer field label placed cleanly over artwork pitch at x: 1360, y: 740
       drawSoccerField() {
         this.add
           .text(1360, 740, "⚽ FUTEBOL 2D", {
@@ -605,7 +603,7 @@ export default function VirtualCampus({
         for (const [x, y, name] of [
           [200, 850, "Matheus"],
           [300, 850, "Arthur"],
-          [1380, 280, "Maria"],
+          [1380, 180, "Maria"],
         ] as [number, number, string][]) {
           const off = avatar(this, x, y, 0x4b729f, name, 0xf0b38c, true);
           off.setDepth(y);
@@ -619,9 +617,9 @@ export default function VirtualCampus({
         }
 
         const furnitureBoxes = [
-          [1030, 450, 280, 40], // Ubongo admin desks
+          [1120, 480, 300, 40], // Ubongo admin desks inside room
           [740, 130, 200, 40],  // Teacher desks
-          [1240, 160, 180, 30], // Cafeteria counter
+          [1240, 140, 180, 30], // Cafeteria counter
         ];
 
         return furnitureBoxes.some(
@@ -641,21 +639,21 @@ export default function VirtualCampus({
         }
 
         // Check Coffee Counter
-        if (Phaser.Math.Distance.Between(local.x, local.y, 1330, 180) < 95) {
+        if (Phaser.Math.Distance.Between(local.x, local.y, 1280, 120) < 85) {
           setHasCoffeeEffect(true);
           safeSetPrompt("☕ Efeito Café ativado! Sua velocidade aumentou temporariamente.");
           return;
         }
 
         // Check Ping Pong Table (x: 1180, y: 780)
-        if (Phaser.Math.Distance.Between(local.x, local.y, 1180, 780) < 110) {
+        if (Phaser.Math.Distance.Between(local.x, local.y, 1180, 780) < 100) {
           setShowPingPong(true);
           return;
         }
 
-        // Check Computer Desks
+        // Check Computer Desks inside rooms
         const desk = computerDesks.find(
-          (d) => Phaser.Math.Distance.Between(local!.x, local!.y, d.x, d.y) < 85
+          (d) => Phaser.Math.Distance.Between(local!.x, local!.y, d.x, d.y) < 70
         );
         if (desk) {
           setShowRpgMission(true);
@@ -670,7 +668,7 @@ export default function VirtualCampus({
 
         // Check NPCs
         const targetNpc = npcList.find(
-          (npc) => Phaser.Math.Distance.Between(local!.x, local!.y, npc.x, npc.y) < 95
+          (npc) => Phaser.Math.Distance.Between(local!.x, local!.y, npc.x, npc.y) < 85
         );
         if (targetNpc) {
           if (targetNpc.isNia) {
@@ -854,7 +852,7 @@ export default function VirtualCampus({
         }
 
         // Check Proximity Interactivity & Set Prompts / Action Cards
-        if (Phaser.Math.Distance.Between(local.x, local.y, 1330, 180) < 95) {
+        if (Phaser.Math.Distance.Between(local.x, local.y, 1280, 120) < 85) {
           setActionPrompt({
             label: "☕ TOMAR CAFÉ DA UBONGO (Aumentar Velocidade)",
             action: () => setHasCoffeeEffect(true),
@@ -863,7 +861,7 @@ export default function VirtualCampus({
           return;
         }
 
-        if (Phaser.Math.Distance.Between(local.x, local.y, 1180, 780) < 110) {
+        if (Phaser.Math.Distance.Between(local.x, local.y, 1180, 780) < 100) {
           setActionPrompt({
             label: "🏓 JOGAR PING-PONG 2D",
             action: () => setShowPingPong(true),
@@ -873,7 +871,7 @@ export default function VirtualCampus({
         }
 
         const desk = computerDesks.find(
-          (d) => Phaser.Math.Distance.Between(local!.x, local!.y, d.x, d.y) < 85
+          (d) => Phaser.Math.Distance.Between(local!.x, local!.y, d.x, d.y) < 70
         );
         if (desk) {
           setActionPrompt({
@@ -894,7 +892,7 @@ export default function VirtualCampus({
         }
 
         const targetNpc = npcList.find(
-          (npc) => Phaser.Math.Distance.Between(local!.x, local!.y, npc.x, npc.y) < 95
+          (npc) => Phaser.Math.Distance.Between(local!.x, local!.y, npc.x, npc.y) < 85
         );
         if (targetNpc) {
           setNearbyTarget(targetNpc);
@@ -1036,9 +1034,9 @@ export default function VirtualCampus({
         </button>
       </div>
 
-      {/* PROXIMITY INTERACTION ACTION BANNER */}
+      {/* PROXIMITY INTERACTION ACTION BANNER (Placed at top-4 cleanly) */}
       {actionPrompt && (
-        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-30 flex items-center gap-4 rounded-2xl border-2 border-emerald-400 bg-[#182333]/95 px-6 py-3.5 text-white shadow-[0_0_25px_rgba(16,185,129,0.3)] backdrop-blur-xl animate-bounce">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-4 rounded-2xl border-2 border-emerald-400 bg-[#0b0f17]/95 px-6 py-3 text-white shadow-[0_0_25px_rgba(16,185,129,0.3)] backdrop-blur-xl animate-bounce">
           <span className="font-extrabold text-sm text-emerald-300 tracking-wide">
             {actionPrompt.label}
           </span>
