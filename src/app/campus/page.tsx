@@ -16,6 +16,7 @@ export default function CampusPage() {
   const [niaLoading, setNiaLoading] = useState(false);
 
   const [user, setUser] = useState<{ id: string; name: string; role: string; teamId?: string } | null>(null);
+  const [profile, setProfile] = useState<any>(null);
   const [loadingUser, setLoadingUser] = useState(true);
 
   useEffect(() => {
@@ -28,12 +29,20 @@ export default function CampusPage() {
       .then((data) => {
         if (data.user) {
           setUser(data.user);
+          return fetch("/api/profile");
         } else {
           checkLocalFallback();
+          throw new Error("Local fallback");
         }
       })
-      .catch(() => {
-        checkLocalFallback();
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.profile) setProfile(data.profile);
+      })
+      .catch((e) => {
+        if (e.message !== "Local fallback") {
+          checkLocalFallback();
+        }
       })
       .finally(() => {
         setLoadingUser(false);
@@ -152,6 +161,7 @@ export default function CampusPage() {
                 role={role}
                 teamSlug={teamSlug}
                 userId={user?.id || "local"}
+                profile={profile}
                 onNiaInteract={() => setNiaOpen(true)}
               />
             </div>

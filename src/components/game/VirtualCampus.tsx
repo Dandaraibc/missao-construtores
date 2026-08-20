@@ -17,6 +17,7 @@ interface Props {
   role?: Role;
   teamSlug?: string;
   userId?: string;
+  profile?: any;
   onNiaInteract?: () => void;
 }
 
@@ -403,7 +404,28 @@ export default function VirtualCampus({
         this.nia.setInteractive(new Phaser.Geom.Rectangle(-20, -40, 40, 60), Phaser.Geom.Rectangle.Contains);
         this.nia.on("pointerdown", () => propsRef.current.onNiaInteract?.());
 
-        local = avatar(this, 760, 520, 0xf26b5b, propsRef.current.displayName);
+        const SKIN_TONES: Record<string, number> = {
+          light: 0xffdbac,
+          medium: 0xc68642,
+          dark: 0x8d5524,
+          very_dark: 0x3d2314,
+          alien: 0x10b981
+        };
+        const OUTFIT_COLORS: Record<string, number> = {
+          uniform: 0x3b2c7d,
+          casual: 0x10b981,
+          jacket: 0xdc2626
+        };
+
+        const skinColor = propsRef.current.profile?.skinTone 
+          ? SKIN_TONES[propsRef.current.profile.skinTone] || 0xf0b38c 
+          : 0xf0b38c;
+          
+        const shirtColor = propsRef.current.profile?.shirt
+          ? OUTFIT_COLORS[propsRef.current.profile.shirt] || 0xf26b5b
+          : 0xf26b5b;
+
+        local = avatar(this, 760, 520, shirtColor, propsRef.current.displayName, skinColor);
         local.setDepth(520);
         
         // Strict follow with a bit of lerp for smoothness

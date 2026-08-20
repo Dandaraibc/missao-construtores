@@ -14,8 +14,10 @@ import { teams } from "@/data/teams";
 
 export default function AvatarPage() {
   const router = useRouter();
-  const [students, setStudents] = useState<Student[]>([]);
-  const [selectedStudentId, setSelectedStudentId] = useState("");
+  const [user, setUser] = useState<{ id: string; name: string; teamId?: string } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
   const [config, setConfig] = useState<AvatarConfig>({
     skinTone: "medium",
     hairStyle: "straight-short",
@@ -25,42 +27,67 @@ export default function AvatarPage() {
   });
 
   useEffect(() => {
-    setStudents(getStudents());
-  }, []);
-
-  const selectedStudent = students.find((s) => s.id === selectedStudentId);
-  const team = selectedStudent
-    ? teams.find((t) => t.slug === selectedStudent.teamSlug)
-    : null;
+    // Busca usuário real e perfil
+    fetch("/api/auth/me")
+      .then((res) => {
+        if (!res.ok) throw new Error("Não autenticado");
+        return res.json();
+      })
+      .then((data) => {
+        if (data.user) {
+          setUser(data.user);
+          setConfig((prev) => ({ ...prev, name: data.user.name }));
+          return fetch("/api/profile");
+        }
+        throw new Error("Não autenticado");
+      })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.profile) {
+          setConfig({
+            skinTone: data.profile.skinTone || "medium",
+            hairStyle: data.profile.hair || "straight-short",
+            outfit: data.profile.shirt || "uniform",
+            accessory: data.profile.accessory || "none",
+            name: user?.name || config.name,
+          });
+        }
+      })
+      .catch(() => {
+        router.push("/");
+      })
+      .finally(() => setLoading(false));
+  }, [router, user?.name, config.name]);
 
   const update = <K extends keyof AvatarConfig>(key: K, value: AvatarConfig[K]) => {
     setConfig((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleSelectStudent = (id: string) => {
-    setSelectedStudentId(id);
-    const student = students.find((s) => s.id === id);
-    if (student) {
-      setConfig((prev) => ({ ...prev, name: student.name }));
+  const handleContinue = async () => {
+    setSaving(true);
+    try {
+      await fetch("/api/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          skinTone: config.skinTone,
+          hair: config.hairStyle,
+          shirt: config.outfit,
+          accessory: config.accessory,
+        }),
+      });
+      router.push("/campus");
+    } catch (e) {
+      alert("Erro ao salvar perfil.");
+    } finally {
+      setSaving(false);
     }
-  };
-
-  const handleContinue = () => {
-    if (!selectedStudentId || !selectedStudent) {
-      alert("Selecione seu nome na lista para personalizar seu personagem.");
-      return;
-    }
-    const payload = {
-      ...config,
-      name: selectedStudent.name,
-      studentId: selectedStudent.id,
-      teamSlug: selectedStudent.teamSlug,
-    };
-    localStorage.setItem("missao-avatar", JSON.stringify(payload));
-    router.push("/campus");
   };
 
   const skinColor = SKIN_TONES.find((s) => s.id === config.skinTone)?.color || "#C68642";
+  const team = user ? teams.find((t) => t.slug === user.teamId) : null;
+
+  if (loading) return <div className="min-h-screen bg-[#0b0f17] flex items-center justify-center font-mono text-[#10b981]">Carregando provador...</div>;
 
   return (
     <div className="min-h-screen bg-[#0b0f17] text-white">
@@ -80,7 +107,7 @@ export default function AvatarPage() {
       </header>
 
       <main className="max-w-4xl mx-auto px-6 py-8">
-        {students.length === 0 ? (
+        {!user ? (
           <div className="bg-[#111827] border border-white/10 rounded-3xl p-8 text-center space-y-4 shadow-2xl">
             <p className="text-white/70 text-sm">
               Nenhum aluno cadastrado ainda na turma.
@@ -151,26 +178,12 @@ export default function AvatarPage() {
 
             {/* Customization Options */}
             <div className="space-y-6 rounded-3xl border border-white/15 bg-[#111827] p-6 shadow-2xl">
-              {/* Select Student */}
-              <div>
-                <label className="block text-xs font-bold text-white mb-2">
-                  Selecione seu Nome na Lista:
-                </label>
-                <select
-                  value={selectedStudentId}
-                  onChange={(e) => handleSelectStudent(e.target.value)}
-                  className="w-full bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-[#10b981]"
-                >
-                  <option value="">— Escolha seu nome —</option>
-                  {students.map((s) => {
-                    const t = teams.find((tm) => tm.slug === s.teamSlug);
-                    return (
-                      <option key={s.id} value={s.id}>
-                        {s.name} ({t?.shortName || s.teamSlug})
-                      </option>
-                    );
-                  })}
-                </select>
+              {/* Remove Select Student, just show current user info */}
+              <div className="mb-4">
+                <div className="text-xs font-bold text-white/50 mb-1">Identificação:</div>
+                <div className="bg-black/40 border border-white/20 rounded-xl px-4 py-3 text-sm font-bold text-white">
+                  {user?.name}
+                </div>
               </div>
 
               {/* Skin Tone */}
@@ -255,10 +268,10 @@ export default function AvatarPage() {
 
               <button
                 onClick={handleContinue}
-                disabled={!selectedStudentId}
+                disabled={saving}
                 className="w-full py-4 rounded-xl font-extrabold text-black bg-[#10b981] hover:bg-[#34d399] transition-all uppercase tracking-wider text-xs shadow-lg disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
               >
-                Salvar & Entrar no Campus ➔
+                {saving ? "Salvando..." : "Salvar & Entrar no Campus ➔"}
               </button>
             </div>
           </div>
