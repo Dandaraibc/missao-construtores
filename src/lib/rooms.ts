@@ -20,7 +20,6 @@ export function savePresence(list: RoomPresence[]) {
 export function setMyPresence(data: Omit<RoomPresence, "lastSeen">) {
   const list = getPresence().filter((p) => p.studentId !== data.studentId);
   list.push({ ...data, lastSeen: new Date().toISOString() });
-  // keep only last 2 minutes of activity
   const cutoff = Date.now() - 2 * 60 * 1000;
   const cleaned = list.filter((p) => new Date(p.lastSeen).getTime() > cutoff);
   savePresence(cleaned);
@@ -70,16 +69,15 @@ export function sendChatMessage(
     createdAt: new Date().toISOString(),
   };
   all.push(msg);
-  // keep last 500 messages total
   const trimmed = all.slice(-500);
   localStorage.setItem(CHAT_KEY, JSON.stringify(trimmed));
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("new_chat_message", { detail: msg }));
+  }
   return msg;
 }
 
-export function updateMyStatus(
-  studentId: string,
-  status: PresenceStatus
-) {
+export function updateMyStatus(studentId: string, status: PresenceStatus) {
   const list = getPresence();
   const me = list.find((p) => p.studentId === studentId);
   if (me) {

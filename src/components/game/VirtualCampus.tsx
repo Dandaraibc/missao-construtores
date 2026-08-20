@@ -3,8 +3,12 @@ import { useEffect, useRef, useState } from "react";
 import * as Phaser from "phaser";
 import { MultiplayerClient } from "@/game/network/MultiplayerClient";
 import { getChat, sendChatMessage } from "@/lib/rooms";
+import { ChatMessage } from "@/types/room";
 
 type Role = "STUDENT" | "TEACHER" | "UBONGO_ADMIN" | "SUPER_ADMIN";
+type MicState = "MIC_MUTED" | "MIC_ON" | "MIC_DENIED" | "MIC_UNAVAILABLE";
+type AudioState = "AUDIO_ON" | "AUDIO_MUTED";
+
 interface Props {
   displayName?: string;
   role?: Role;
@@ -47,6 +51,25 @@ const npcList: (PlayerTarget & { x: number; y: number })[] = [
   { name: "Prof. Niltes", role: "Professora", team: "professores", x: 790, y: 190 },
   { name: "Prof. Diego", role: "Professor", team: "professores", x: 900, y: 190 },
 ];
+
+function getAudioZone(x: number, y: number): { id: string; name: string } {
+  if (x >= 50 && x <= 300 && y >= 50 && y <= 300) {
+    return { id: "pesquisa", name: "ROOM_PESQUISA (Descobertas)" };
+  }
+  if (x >= 320 && x <= 580 && y >= 50 && y <= 300) {
+    return { id: "produto", name: "ROOM_PRODUTO (Ideias)" };
+  }
+  if (x >= 600 && x <= 980 && y >= 50 && y <= 300) {
+    return { id: "design", name: "ROOM_DESIGN (Criativa)" };
+  }
+  if (x >= 1020 && x <= 1480 && y >= 340 && y <= 620) {
+    return { id: "bongo", name: "ROOM_BONGO (Sala do Bongo)" };
+  }
+  if (x >= 480 && x <= 920 && y >= 380 && y <= 480) {
+    return { id: "meeting", name: "MEETING_TABLE (Mesa de Reunião)" };
+  }
+  return { id: "central", name: "AREA_CENTRAL (Campus General)" };
+}
 
 function avatar(
   scene: Phaser.Scene,
@@ -118,26 +141,28 @@ export default function VirtualCampus({
   const promptRef = useRef("Explore o Office · aproxime-se de uma pessoa para conversar");
   const [prompt, setPrompt] = useState(promptRef.current);
   const [online, setOnline] = useState(1);
+  const [currentAudioZone, setCurrentAudioZone] = useState("AREA_CENTRAL");
 
-  // HUD Social State
-  const [micOn, setMicOn] = useState(false);
-  const [audioOn, setAudioOn] = useState(true);
+  // 1. Microphone States & Controls (MIC_MUTED, MIC_ON, MIC_DENIED, MIC_UNAVAILABLE)
+  const [micState, setMicState] = useState<MicState>("MIC_MUTED");
+  // 2. Audio States & Controls (AUDIO_ON, AUDIO_MUTED)
+  const [audioState, setAudioState] = useState<AudioState>("AUDIO_ON");
   const [isSpeaking, setIsSpeaking] = useState(false);
 
-  // Chat Contextual State
+  // 3. Chat Contextual States & Unread Badges
   const [chatOpen, setChatOpen] = useState(false);
   const [chatTab, setChatTab] = useState<"area" | "team" | "meeting">("area");
   const [chatText, setChatText] = useState("");
-  const [chatMessages, setChatMessages] = useState(() =>
-    typeof window === "undefined" ? [] : getChat("area").slice(-20)
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() =>
+    typeof window === "undefined" ? [] : getChat("area").slice(-30)
   );
 
-  // Player Proximity / Interaction State
+  // 4. Player Proximity & Interaction Modal
   const [nearbyTarget, setNearbyTarget] = useState<PlayerTarget | null>(null);
   const [interactionModal, setInteractionModal] = useState<PlayerTarget | null>(null);
 
   const micStream = useRef<MediaStream | null>(null);
-  const micOnRef = useRef(false);
   const isSpeakingRef = useRef(false);
   const audioContextRef = useRef<AudioContext | null>(null);
 
@@ -153,6 +178,26 @@ export default function VirtualCampus({
     }
   };
 
+  // Real-time Chat Sync & Unread Badge Counter
+  useEffect(() => {
+    const handleNewMessage = (e: Event) => {
+      const customEvent = e as CustomEvent<ChatMessage>;
+      const msg = customEvent.detail;
+      const currentRoomId =
+        chatTab === "area" ? "area" : chatTab === "team" ? `team-${teamSlug}` : "meeting";
+
+      if (msg.roomId === currentRoomId) {
+        setChatMessages(getChat(currentRoomId).slice(-30));
+      }
+      if (!chatOpen) {
+        setUnreadCount((prev) => prev + 1);
+      }
+    };
+
+    window.addEventListener("new_chat_message", handleNewMessage);
+    return () => window.removeEventListener("new_chat_message", handleNewMessage);
+  }, [chatOpen, chatTab, teamSlug]);
+
   // Synchronize chat messages when tab changes
   useEffect(() => {
     const roomId =
@@ -160,36 +205,41 @@ export default function VirtualCampus({
     setChatMessages(getChat(roomId).slice(-30));
   }, [chatTab, teamSlug]);
 
+  const toggleChatPanel = () => {
+    if (!chatOpen) {
+      setUnreadCount(0);
+    }
+    setChatOpen((prev) => !prev);
+  };
+
   const sendMessage = () => {
     if (!chatText.trim()) return;
     const roomId =
       chatTab === "area" ? "area" : chatTab === "team" ? `team-${teamSlug}` : "meeting";
     sendChatMessage(roomId, userId, displayName, chatText.trim());
     setChatText("");
-    setChatMessages(getChat(roomId).slice(-30));
   };
 
-  // Toggle Microphone (Independent Control)
-  const toggleMic = async () => {
-    if (micOn) {
+  // 1. Microphone Control Function (Explicit user action & permission handling)
+  const toggleMicrophone = async () => {
+    if (micState === "MIC_ON") {
       micStream.current?.getTracks().forEach((track) => {
         track.enabled = false;
       });
-      setMicOn(false);
-      micOnRef.current = false;
+      setMicState("MIC_MUTED");
       setIsSpeaking(false);
       isSpeakingRef.current = false;
       return;
     }
+
     try {
       micStream.current = await navigator.mediaDevices.getUserMedia({ audio: true });
       micStream.current.getTracks().forEach((track) => {
         track.enabled = true;
       });
-      setMicOn(true);
-      micOnRef.current = true;
+      setMicState("MIC_ON");
 
-      // Web Audio API speech detection
+      // Web Audio API speech volume analysis
       try {
         const AudioContextClass =
           window.AudioContext ||
@@ -202,7 +252,7 @@ export default function VirtualCampus({
         const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
         const checkVolume = () => {
-          if (!micOnRef.current || !micStream.current) {
+          if (!micStream.current || !micStream.current.active) {
             setIsSpeaking(false);
             isSpeakingRef.current = false;
             return;
@@ -213,24 +263,32 @@ export default function VirtualCampus({
             sum += dataArray[i];
           }
           const avg = sum / dataArray.length;
-          const speaking = avg > 12;
+          const speaking = avg > 12 && audioState === "AUDIO_ON";
           setIsSpeaking(speaking);
           isSpeakingRef.current = speaking;
           requestAnimationFrame(checkVolume);
         };
         checkVolume();
       } catch {
-        // Fallback: indicate mic is active without spectral analysis
         setIsSpeaking(true);
         isSpeakingRef.current = true;
       }
-    } catch {
-      safeSetPrompt("Microfone bloqueado · conceda permissão no navegador para falar");
+    } catch (err: unknown) {
+      const error = err as { name?: string };
+      if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
+        setMicState("MIC_DENIED");
+        safeSetPrompt("Permissão de microfone negada no navegador. Clique novamente para autorizar.");
+      } else {
+        setMicState("MIC_UNAVAILABLE");
+        safeSetPrompt("Nenhum dispositivo de microfone encontrado.");
+      }
     }
   };
 
-  // Toggle Audio Listening (Independent Control)
-  const toggleAudio = () => setAudioOn((value) => !value);
+  // 2. Audio Listening Control Function (Independent from Mic)
+  const toggleAudioListening = () => {
+    setAudioState((prev) => (prev === "AUDIO_ON" ? "AUDIO_MUTED" : "AUDIO_ON"));
+  };
 
   useEffect(() => {
     if (!mountRef.current) return;
@@ -544,7 +602,6 @@ export default function VirtualCampus({
           return;
         }
 
-        // Check nearby NPC / Avatar
         const targetNpc = npcList.find(
           (npc) => Phaser.Math.Distance.Between(local!.x, local!.y, npc.x, npc.y) < 80
         );
@@ -582,10 +639,14 @@ export default function VirtualCampus({
       update(time: number, delta: number) {
         if (!local) return;
 
-        // Render speaking wave animation on local avatar
+        // Synchronize speaking indicator graphics on avatar
         if (local.setSpeaking) {
           local.setSpeaking(isSpeakingRef.current);
         }
+
+        // Calculate active Audio Zone
+        const zoneInfo = getAudioZone(local.x, local.y);
+        setCurrentAudioZone(zoneInfo.name);
 
         if (seated && occupiedSeat) {
           local.setPosition(occupiedSeat.x, occupiedSeat.y);
@@ -593,7 +654,7 @@ export default function VirtualCampus({
           return;
         }
 
-        // Automatic unstick algorithm: push out if inside wall
+        // Automatic unstick algorithm
         if (this.blocked(local.x, local.y)) {
           for (let offset = 2; offset <= 30; offset += 2) {
             if (!this.blocked(local.x, local.y + offset)) {
@@ -619,7 +680,6 @@ export default function VirtualCampus({
         const oy = local.y;
         let dir = "down";
 
-        // Movement step (260 px/s)
         const moveStep = (260 * delta) / 1000;
         const j = joystickRef.current;
         let dx = 0;
@@ -663,7 +723,7 @@ export default function VirtualCampus({
           }
         }
 
-        // Predictive sliding collision check
+        // Collision sliding
         if (dx !== 0) {
           const nextX = Phaser.Math.Clamp(local.x + dx, 40, 1490);
           if (!this.blocked(nextX, local.y)) {
@@ -681,7 +741,7 @@ export default function VirtualCampus({
           }
         }
 
-        // Throttled network update
+        // Throttled network updates
         if ((local.x !== ox || local.y !== oy) && time - lastMoveTime > 40) {
           lastMoveTime = time;
           network.sendMove(local.x, local.y, dir);
@@ -778,7 +838,7 @@ export default function VirtualCampus({
       void network.leave();
       game.destroy(true);
     };
-  }, []);
+  }, [audioState]);
 
   const key = (value: string) => window.dispatchEvent(new KeyboardEvent("keydown", { key: value }));
   const setJoystick = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -796,61 +856,80 @@ export default function VirtualCampus({
     <div className="relative h-full min-h-[560px] w-full overflow-hidden rounded-2xl border-4 border-[#315f4c] bg-[#92cba8]">
       <div ref={mountRef} className="absolute inset-0" />
 
-      {/* PERMANENT SOCIAL HUD (Desktop & Mobile) */}
-      <div className="absolute right-3 top-3 flex flex-wrap items-center gap-2 rounded-2xl border border-white/20 bg-[#182333]/90 p-2 text-xs font-semibold text-white shadow-2xl backdrop-blur-md">
-        {/* Online Status */}
-        <div className="flex items-center gap-1.5 rounded-xl bg-white/10 px-2.5 py-1.5">
+      {/* PERMANENT SOCIAL HUD (Desktop & Mobile - Bottom Right position) */}
+      <div className="absolute right-3 bottom-16 sm:bottom-4 flex flex-wrap items-center gap-2 rounded-2xl border border-white/20 bg-[#182333]/95 p-2.5 text-xs font-semibold text-white shadow-2xl backdrop-blur-md z-30">
+        {/* Online Status & AudioZone indicator */}
+        <div className="hidden sm:flex items-center gap-1.5 rounded-xl bg-white/10 px-2.5 py-1.5 text-[11px]">
           <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
           <span>{online} Online</span>
+          <span className="text-white/40">|</span>
+          <span className="text-emerald-300 font-mono">{currentAudioZone}</span>
         </div>
 
-        {/* Microphone Toggle Control */}
+        {/* 1. MICROPHONE CONTROL BUTTON (MIC_ON, MIC_MUTED, MIC_DENIED, MIC_UNAVAILABLE) */}
         <button
           aria-label="Controle de Microfone"
-          onClick={toggleMic}
-          className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 font-bold transition-all ${
-            micOn
-              ? "bg-emerald-600/30 text-emerald-300 border border-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.3)]"
+          onClick={toggleMicrophone}
+          className={`flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all active:scale-95 ${
+            micState === "MIC_ON"
+              ? "bg-emerald-600/30 text-emerald-300 border border-emerald-500/60 shadow-[0_0_12px_rgba(16,185,129,0.4)]"
+              : micState === "MIC_DENIED"
+              ? "bg-rose-900/60 text-rose-300 border border-rose-500 animate-bounce"
+              : micState === "MIC_UNAVAILABLE"
+              ? "bg-gray-800 text-gray-400 border border-gray-600"
               : "bg-rose-950/40 text-rose-400 border border-rose-500/30 hover:bg-rose-900/50"
           }`}
         >
-          <span>{micOn ? "🎤 Mic: LIGADO" : "🎙️ Mic: MUTADO"}</span>
+          <span>
+            {micState === "MIC_ON"
+              ? "🎤 MIC: LIGADO"
+              : micState === "MIC_DENIED"
+              ? "🚫 MIC: NEGADO"
+              : micState === "MIC_UNAVAILABLE"
+              ? "⚠️ MIC: INDISPONÍVEL"
+              : "🔇 MIC: MUTADO"}
+          </span>
           {isSpeaking && <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />}
         </button>
 
-        {/* Audio Listening Control */}
+        {/* 2. AUDIO LISTENING CONTROL BUTTON (AUDIO_ON, AUDIO_MUTED) */}
         <button
           aria-label="Controle de Áudio"
-          onClick={toggleAudio}
-          className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 font-bold transition-all ${
-            audioOn
+          onClick={toggleAudioListening}
+          className={`flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all active:scale-95 ${
+            audioState === "AUDIO_ON"
               ? "bg-blue-600/30 text-blue-300 border border-blue-500/50"
-              : "bg-amber-950/40 text-amber-400 border border-amber-500/30 hover:bg-amber-900/50"
+              : "bg-amber-950/50 text-amber-400 border border-amber-500/50 hover:bg-amber-900/60"
           }`}
         >
-          <span>{audioOn ? "🔊 Áudio: OUVINDO" : "🔇 Áudio: SILENCIADO"}</span>
+          <span>{audioState === "AUDIO_ON" ? "🔊 ÁUDIO: OUVINDO" : "🔇 ÁUDIO: SILENCIADO"}</span>
         </button>
 
-        {/* Chat Toggle Control */}
+        {/* 3. CHAT BUTTON WITH UNREAD BADGE */}
         <button
           aria-label="Painel de Chat"
-          onClick={() => setChatOpen((prev) => !prev)}
-          className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 font-bold transition-all ${
+          onClick={toggleChatPanel}
+          className={`relative flex items-center gap-1.5 rounded-xl px-3 py-2 font-bold transition-all active:scale-95 ${
             chatOpen
               ? "bg-purple-600 text-white shadow-lg"
               : "bg-purple-950/40 text-purple-300 border border-purple-500/30 hover:bg-purple-900/50"
           }`}
         >
-          <span>💬 Chat</span>
+          <span>💬 CHAT</span>
+          {unreadCount > 0 && !chatOpen && (
+            <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-black text-white shadow-lg animate-pulse">
+              {unreadCount}
+            </span>
+          )}
         </button>
       </div>
 
-      {/* PROXIMITY INTERACTION BANNER (Desktop & Mobile) */}
+      {/* PROXIMITY INTERACTION BANNER */}
       {nearbyTarget && (
-        <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 rounded-2xl border-2 border-[#8ee85f] bg-[#182333]/95 px-5 py-3 text-white shadow-2xl backdrop-blur-md animate-bounce">
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 rounded-2xl border-2 border-[#8ee85f] bg-[#182333]/95 px-5 py-3 text-white shadow-2xl backdrop-blur-md">
           <div className="flex flex-col">
             <span className="text-xs text-[#8ee85f] font-mono uppercase tracking-wider">
-              Pessoa Próxima
+              Ação Contextual
             </span>
             <span className="font-bold text-sm">
               {nearbyTarget.name} • {nearbyTarget.role}
@@ -866,14 +945,14 @@ export default function VirtualCampus({
             }}
             className="rounded-xl bg-[#8ee85f] px-4 py-2 text-xs font-extrabold text-[#10160e] shadow-lg hover:bg-[#a6f07b] transition-transform active:scale-95"
           >
-            [ CONVERSAR COM {nearbyTarget.name.toUpperCase()} ]
+            [ CONVERSAR ]
           </button>
         </div>
       )}
 
-      {/* PLAYER INTERACTION MODAL / CARD */}
+      {/* PLAYER INTERACTION MODAL / OPTIONS */}
       {interactionModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm p-4">
           <div className="w-full max-w-sm rounded-3xl border-2 border-emerald-500/40 bg-[#182333] p-6 text-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-3">
@@ -899,29 +978,33 @@ export default function VirtualCampus({
                 <span className="font-bold text-white uppercase">{interactionModal.team}</span>
               </div>
               <div className="flex justify-between rounded-xl bg-white/5 p-2.5">
-                <span className="text-white/50">AudioZone:</span>
-                <span className="font-bold text-emerald-400">Ativa (Área Central)</span>
+                <span className="text-white/50">Roteamento AudioZone:</span>
+                <span className="font-bold text-emerald-400">{currentAudioZone}</span>
+              </div>
+              <div className="text-[10px] text-white/40 italic">
+                A voz só é transmitida entre usuários na mesma AudioZone sem vazamento para outras salas.
               </div>
             </div>
 
             <div className="space-y-2 pt-2">
               <button
                 onClick={() => {
-                  if (!micOn) toggleMic();
+                  if (micState !== "MIC_ON") toggleMicrophone();
                   setInteractionModal(null);
                 }}
-                className="w-full rounded-xl bg-emerald-600 py-2.5 text-xs font-bold text-white shadow-lg hover:bg-emerald-500 active:scale-95 transition-all"
+                className="w-full rounded-xl bg-emerald-600 py-3 text-xs font-extrabold text-white shadow-lg hover:bg-emerald-500 active:scale-95 transition-all"
               >
-                🎤 Iniciar / Entrar na Conversa por Voz
+                [ FALAR POR VOZ ]
               </button>
               <button
                 onClick={() => {
                   setChatOpen(true);
+                  setUnreadCount(0);
                   setInteractionModal(null);
                 }}
-                className="w-full rounded-xl bg-purple-600 py-2.5 text-xs font-bold text-white shadow-lg hover:bg-purple-500 active:scale-95 transition-all"
+                className="w-full rounded-xl bg-purple-600 py-3 text-xs font-extrabold text-white shadow-lg hover:bg-purple-500 active:scale-95 transition-all"
               >
-                💬 Enviar Mensagem no Chat
+                [ ABRIR CHAT ]
               </button>
             </div>
           </div>
@@ -933,9 +1016,9 @@ export default function VirtualCampus({
         {prompt}
       </div>
 
-      {/* CONTEXTUAL CHAT PANEL */}
+      {/* CONTEXTUAL CHAT PANEL WITH UNREAD BADGES & CHANNELS */}
       {chatOpen && (
-        <div className="absolute right-3 top-16 w-80 max-w-[90vw] rounded-2xl border border-white/20 bg-[#182333]/95 p-4 text-xs text-white shadow-2xl backdrop-blur-xl z-30">
+        <div className="absolute right-3 top-14 w-84 max-w-[90vw] rounded-2xl border border-white/20 bg-[#182333]/95 p-4 text-xs text-white shadow-2xl backdrop-blur-xl z-40">
           <div className="mb-3 flex items-center justify-between border-b border-white/10 pb-2">
             <span className="font-bold text-sm tracking-wide text-purple-300">💬 CHAT CONTEXTUAL</span>
             <button
@@ -974,25 +1057,30 @@ export default function VirtualCampus({
             </button>
           </div>
 
-          {/* CHAT MESSAGES DISPLAY */}
-          <div className="mb-3 h-48 overflow-y-auto space-y-2 rounded-xl bg-black/20 p-2.5 border border-white/5">
+          {/* CHAT MESSAGES LIST */}
+          <div className="mb-3 h-52 overflow-y-auto space-y-2 rounded-xl bg-black/25 p-2.5 border border-white/5">
             {chatMessages.length === 0 ? (
               <div className="flex h-full items-center justify-center text-white/40 italic">
                 Nenhuma mensagem neste canal ainda.
               </div>
             ) : (
               chatMessages.map((msg) => (
-                <div key={msg.id} className="rounded-lg bg-white/5 p-2">
-                  <div className="flex justify-between font-bold text-[#8ee85f] mb-0.5">
-                    <span>{msg.name}</span>
-                    <span className="text-[10px] text-white/40">
+                <div key={msg.id} className="rounded-xl bg-white/5 p-2.5 border border-white/5">
+                  <div className="flex justify-between items-center font-bold text-[#8ee85f] mb-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="h-5 w-5 rounded-full bg-purple-500/30 flex items-center justify-center text-[10px]">
+                        👤
+                      </span>
+                      <span>{msg.name}</span>
+                    </div>
+                    <span className="text-[10px] text-white/40 font-mono">
                       {new Date(msg.createdAt).toLocaleTimeString([], {
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
                     </span>
                   </div>
-                  <div className="text-white/90 break-words">{msg.text}</div>
+                  <div className="text-white/90 break-words pl-6">{msg.text}</div>
                 </div>
               ))
             )}
@@ -1002,7 +1090,7 @@ export default function VirtualCampus({
           <div className="flex gap-2">
             <input
               type="text"
-              placeholder={`Mensagem em ${
+              placeholder={`Enviar em ${
                 chatTab === "area" ? "Área" : chatTab === "team" ? "Equipe" : "Reunião"
               }...`}
               value={chatText}
@@ -1012,13 +1100,13 @@ export default function VirtualCampus({
             />
             <button
               onClick={sendMessage}
-              className="rounded-xl bg-purple-600 px-3 py-2 font-bold text-white hover:bg-purple-500 active:scale-95 transition-all"
+              className="rounded-xl bg-purple-600 px-3.5 py-2 font-bold text-white hover:bg-purple-500 active:scale-95 transition-all"
             >
               Enviar
             </button>
           </div>
 
-          <div className="mt-2 text-[10px] text-white/50 text-center">
+          <div className="mt-2 text-[10px] text-white/40 text-center">
             🔒 Mensagens privadas entre alunos desativadas nesta versão.
           </div>
         </div>
