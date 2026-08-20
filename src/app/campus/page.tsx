@@ -1,34 +1,209 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import NiaVoiceButton from "@/components/nia/NiaVoiceButton";
-import RoomPanel from "@/components/RoomPanel";
+
 const VirtualCampus = dynamic(() => import("@/components/game/VirtualCampus"), { ssr: false });
+
 export default function CampusPage() {
   const [niaOpen, setNiaOpen] = useState(false);
   const [niaMessage, setNiaMessage] = useState("");
   const [niaReply, setNiaReply] = useState("");
   const [niaLoading, setNiaLoading] = useState(false);
-  const [roomChatOpen, setRoomChatOpen] = useState(false);
-  const [avatar, setAvatar] = useState<{ name: string; teamSlug?: string } | null>(null);
-  useEffect(() => { const raw = localStorage.getItem("missao-avatar"); if (raw) setAvatar(JSON.parse(raw)); }, []);
-  const name = avatar?.name || "Dandara";
-  const niaText = `Olá, ${name}. Eu sou o NIA, agente da Ubongo. O prazo global é 04 de setembro de 2026.`;
+
+  const [user, setUser] = useState<{ id: string; name: string; role: string; teamId?: string } | null>(null);
+
+  useEffect(() => {
+    const raw = localStorage.getItem("missao-user");
+    if (raw) {
+      setUser(JSON.parse(raw));
+    } else {
+      const avatarRaw = localStorage.getItem("missao-avatar");
+      if (avatarRaw) {
+        const parsed = JSON.parse(avatarRaw);
+        setUser({ id: "local-user", name: parsed.name || "Visitante", role: "STUDENT", teamId: parsed.teamSlug || "pesquisa" });
+      }
+    }
+  }, []);
+
+  const name = user?.name || "Visitante Feira";
+  const role = (user?.role as "STUDENT" | "TEACHER" | "UBONGO_ADMIN" | "SUPER_ADMIN" | "VISITOR") || "STUDENT";
+  const teamSlug = user?.teamId || "pesquisa";
+
+  const niaText = `Olá, ${name}. Eu sou a NIA, assistente virtual da Ubongo no Missão Construtores!`;
+
   async function askNia() {
     if (!niaMessage.trim()) return;
     setNiaLoading(true);
     try {
-      const response = await fetch("/api/nia/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: niaMessage, context: { projectId: "mission-builders", userId: "local", role: "STUDENT", currentRoom: "Praça Central", permissions: [] } }) });
+      const response = await fetch("/api/nia/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: niaMessage,
+          context: {
+            projectId: "missao-construtores",
+            userId: user?.id || "local",
+            role: role,
+            teamId: teamSlug,
+            currentRoom: "Campus Central",
+            permissions: [],
+          },
+        }),
+      });
       const data = await response.json();
       setNiaReply(data.reply || data.error || "Não consegui responder agora.");
       setNiaMessage("");
-    } finally { setNiaLoading(false); }
+    } catch {
+      setNiaReply("Olá! Sou a NIA, assistente da Ubongo. Estou aqui para ajudar sua equipe no Missão Construtores!");
+    } finally {
+      setNiaLoading(false);
+    }
   }
-  return <main className="min-h-screen bg-[#080c12] p-2 text-white sm:p-4"><div className="mx-auto max-w-[1700px]">
-    <div className="grid gap-2 lg:grid-cols-[220px_minmax(0,1fr)_290px]">
-      <aside className="hidden space-y-2 lg:block"><div className="rounded-2xl border border-white/20 bg-[#111923] p-4"><div className="text-2xl font-black tracking-tight text-[#f4f0df]">ubongo</div><div className="text-xs text-[#8ee85f]">office virtual</div><div className="mt-4 text-sm">Bem-vinda, <strong>{name}</strong></div><div className="mt-2 text-xs text-[#8ee85f]">● Online</div><div className="mt-4 rounded bg-white/5 p-2 text-xs">🟣 Equipe Produto</div></div><nav className="rounded-2xl border border-white/20 bg-[#111923] p-3 text-sm"><div className="mb-2 text-xs font-bold text-[#8ee85f]">NAVEGAÇÃO</div>{["⌂ Praça Central","◈ Minhas Missões","♧ Equipes","◫ Reuniões","♜ Ranking","⚙ Configurações"].map((item) => <div className="rounded px-2 py-2 text-white/80 hover:bg-white/10" key={item}>{item}</div>)}</nav><div className="rounded-2xl border border-white/20 bg-[#111923] p-3 text-xs"><div className="mb-2 font-bold text-[#8ee85f]">CHAT DA ÁREA</div><p>🧑 Niltes: Bom dia, equipe!</p><p>🧑 Diego: Bora construir 🚀</p><p>👩 Angelina: pronta!</p></div></aside>
-      <section className="min-w-0"><header className="mb-2 flex items-center justify-between rounded-2xl border border-white/20 bg-[#111923] px-4 py-2"><div><h1 className="font-black">MISSÃO CONSTRUTORES</h1><p className="text-xs text-white/50">Escritório virtual de desenvolvimento da Ubongo</p></div><div className="flex items-center gap-2"><NiaVoiceButton text={niaText} className="rounded-full bg-[#8ee85f] px-3 py-2 text-xs font-bold text-[#10160e]" /></div></header><div className="h-[calc(100vh-190px)] min-h-[560px]"><VirtualCampus displayName={name} teamSlug={avatar?.teamSlug} onNiaInteract={() => setNiaOpen(true)} /></div><div className="mt-2 grid gap-2 sm:grid-cols-3"><div className="rounded-2xl border border-white/20 bg-[#111923] p-3 text-center text-xs">Microfone <span className="text-[#8ee85f]">ligado</span></div><div className="rounded-2xl border border-white/20 bg-[#111923] p-3 text-center text-xs">Áudio <span className="text-[#8ee85f]">ouvindo</span></div><div className="rounded-2xl border border-white/20 bg-[#111923] p-3 text-center text-xs">Chat <span className="text-[#8ee85f]">abrir</span></div></div></section>
-      <aside className="hidden space-y-2 lg:block"><div className="rounded-2xl border border-[#8ee85f]/40 bg-[#111923] p-4"><div className="text-lg font-black text-[#8ee85f]">PORTA DAS MISSÕES</div><p className="mt-2 text-xs text-white/70">Missões desafiam você. Aprendizado transforma você.</p><button className="mt-4 w-full rounded-lg bg-[#8ee85f] py-2 font-bold text-[#10160e]">ENTRAR</button></div><div className="rounded-2xl border border-white/20 bg-[#111923] p-4"><div className="mb-3 text-lg font-black text-[#8ee85f]">MISSÕES</div>{["Floresta de Código","Deserto da Lógica","Labirinto de Dados","Torre da IA"].map((mission, index) => <div className="mb-2 rounded-lg border border-white/10 bg-white/5 p-3 text-xs" key={mission}><div className="font-bold">{index + 1}. {mission}</div><div className="mt-1 text-white/50">{index < 2 ? "Disponível" : "🔒 Bloqueada"}</div></div>)}</div><div className="rounded-2xl border border-white/20 bg-[#111923] p-4 text-xs"><div className="font-bold text-[#8ee85f]">PRÓXIMA REUNIÃO</div><p className="mt-2">Reunião de Produto</p><p className="text-white/50">Hoje · 14:00</p><button className="mt-3 w-full rounded bg-[#243c39] py-2">🎥 ENTRAR NA REUNIÃO</button></div></aside>
-    </div><footer className="mt-2 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/20 bg-[#0c141e]/95 px-4 py-3 text-xs text-white/70 shadow-2xl"><div className="flex items-center gap-3"><span className="flex items-center gap-2 rounded-xl bg-white/5 px-3 py-2"><span className="grid h-9 w-9 place-items-center rounded-lg bg-[#263746] text-[#8ee85f]"><svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="8" r="3"/><path d="M5 21c.8-3.3 3.1-5 7-5s6.2 1.7 7 5"/></svg></span><span><strong className="block text-sm text-white">{name}</strong><span className="text-[#8ee85f]">● Online</span></span></span></div><div className="flex items-center gap-2"><button className="rounded-xl bg-white/5 px-4 py-2 hover:bg-[#8ee85f]/20"><svg viewBox="0 0 24 24" className="inline h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="8" y="4" width="8" height="12" rx="4"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></svg><span className="ml-2 hidden sm:inline">Microfone</span><small className="ml-1 text-[#8ee85f]">ligado</small></button><button className="rounded-xl bg-white/5 px-4 py-2 hover:bg-[#8ee85f]/20"><svg viewBox="0 0 24 24" className="inline h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4 10v4h4l5 4V6l-5 4H4Z"/><path d="M17 9a5 5 0 0 1 0 6M19 6a9 9 0 0 1 0 12"/></svg><span className="ml-2 hidden sm:inline">Áudio</span><small className="ml-1 text-[#8ee85f]">ouvindo</small></button><button className="rounded-xl bg-white/5 px-4 py-2 hover:bg-[#8ee85f]/20"><svg viewBox="0 0 24 24" className="inline h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M5 6h14v10H8l-3 3V6Z"/><path d="M8 10h8M8 13h5"/></svg><span className="ml-2 hidden sm:inline">Chat</span></button><button className="rounded-xl bg-[#8ee85f]/20 px-4 py-2 text-[#8ee85f]"><svg viewBox="0 0 24 24" className="inline h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2"/><path d="M3 20c.5-3 2.5-5 6-5s5.5 2 6 5M14 15c3-.5 5 .9 6 3"/></svg><span className="ml-2 hidden sm:inline">Pessoas</span></button></div><nav className="flex items-center gap-1"><button className="rounded-xl bg-[#8ee85f] px-4 py-2 font-bold text-[#10160e]"><svg viewBox="0 0 24 24" className="inline h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="m4 11 8-7 8 7v8H4v-8Z"/><path d="M9 19v-5h6v5"/></svg><span className="ml-1">Mapa</span></button><button className="rounded-xl bg-white/5 px-3 py-2">Missões</button><button className="rounded-xl bg-white/5 px-3 py-2">Chats</button><button className="rounded-xl bg-white/5 px-3 py-2">Reuniões</button><button className="rounded-xl bg-white/5 px-3 py-2">Menu</button></nav></footer>
-  </div>{niaOpen && <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4"><div className="w-full max-w-md rounded-2xl border border-[#8ee85f]/40 bg-[#111923] p-5 shadow-2xl"><div className="mb-1 flex items-center justify-between"><h2 className="text-lg font-bold text-[#8ee85f]">NIA · consultora Ubongo</h2><button onClick={() => setNiaOpen(false)} aria-label="Fechar">×</button></div><p className="mb-4 text-xs text-white/60">Converse com o agente da Ubongo sobre a missão e o projeto.</p>{niaReply && <div className="mb-3 rounded-xl bg-white/10 p-3 text-sm">{niaReply}<button className="ml-2 text-xs text-[#8ee85f]" onClick={() => undefined}>Ouvir</button></div>}<textarea value={niaMessage} onChange={(event) => setNiaMessage(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void askNia(); } }} placeholder="Digite sua pergunta..." className="min-h-24 w-full rounded-xl border border-white/15 bg-black/20 p-3 text-sm outline-none" /><button disabled={niaLoading} onClick={() => void askNia()} className="mt-3 w-full rounded-xl bg-[#8ee85f] py-2 font-bold text-[#10160e]">{niaLoading ? "Enviando..." : "Enviar"}</button></div></div>}</main>;
+
+  return (
+    <main className="min-h-screen bg-[#080c12] p-2 text-white sm:p-4">
+      <div className="mx-auto max-w-[1700px]">
+        <div className="grid gap-2 lg:grid-cols-[220px_minmax(0,1fr)_290px]">
+          {/* Left Sidebar */}
+          <aside className="hidden space-y-2 lg:block">
+            <div className="rounded-2xl border border-white/20 bg-[#111923] p-4">
+              <div className="text-2xl font-black tracking-tight text-[#f4f0df]">ubongo</div>
+              <div className="text-xs text-[#8ee85f]">office virtual 2d</div>
+              <div className="mt-4 text-sm font-bold">
+                Bem-vindo(a), <span className="text-[#8ee85f]">{name}</span>
+              </div>
+              <div className="mt-1 text-xs text-white/50 font-mono">Role: {role}</div>
+              <div className="mt-3 rounded-xl bg-white/5 p-2.5 text-xs font-bold text-[#8ee85f] border border-white/10">
+                🛡️ Equipe {teamSlug.toUpperCase()}
+              </div>
+            </div>
+
+            <nav className="rounded-2xl border border-white/20 bg-[#111923] p-3 text-xs">
+              <div className="mb-2 text-[10px] font-extrabold text-[#8ee85f] uppercase tracking-wider">
+                NAVEGAÇÃO RÁPIDA
+              </div>
+              <Link href="/campus" className="block rounded-xl bg-[#8ee85f]/20 px-3 py-2 font-bold text-[#8ee85f] mb-1">
+                ⌂ Campus Office 2D
+              </Link>
+              <Link href={`/equipe/${teamSlug}`} className="block rounded-xl px-3 py-2 text-white/80 hover:bg-white/10 mb-1">
+                ◈ Painel da Minha Equipe
+              </Link>
+              <Link href="/avatar" className="block rounded-xl px-3 py-2 text-white/80 hover:bg-white/10 mb-1">
+                🎨 Customizar Avatar
+              </Link>
+              {(role === "TEACHER" || role === "UBONGO_ADMIN" || role === "SUPER_ADMIN") && (
+                <Link href="/admin" className="block rounded-xl bg-purple-600/30 border border-purple-400/40 px-3 py-2 font-bold text-purple-300">
+                  ⚙ Painel do Professor
+                </Link>
+              )}
+            </nav>
+          </aside>
+
+          {/* Center Main Stage */}
+          <section className="min-w-0">
+            <header className="mb-2 flex items-center justify-between rounded-2xl border border-white/20 bg-[#111923] px-4 py-2.5">
+              <div>
+                <h1 className="font-extrabold text-base tracking-wide text-white">MISSÃO CONSTRUTORES</h1>
+                <p className="text-xs text-white/50">Escritório Virtual Interativo · Feira Carbono Zero</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <NiaVoiceButton text={niaText} className="rounded-xl bg-[#8ee85f] px-3.5 py-2 text-xs font-black text-[#10160e] shadow-lg hover:bg-[#a6f07b] transition-all" />
+              </div>
+            </header>
+
+            <div className="h-[calc(100vh-190px)] min-h-[560px]">
+              <VirtualCampus
+                displayName={name}
+                role={role}
+                teamSlug={teamSlug}
+                userId={user?.id || "local"}
+                onNiaInteract={() => setNiaOpen(true)}
+              />
+            </div>
+          </section>
+
+          {/* Right Sidebar */}
+          <aside className="hidden space-y-2 lg:block">
+            <div className="rounded-2xl border border-[#8ee85f]/40 bg-[#111923] p-4">
+              <div className="text-sm font-black text-[#8ee85f] uppercase tracking-wider">🤖 AGENTE NIA UBONGO</div>
+              <p className="mt-2 text-xs text-white/70">
+                Aproxime-se da NIA no mapa para tirar dúvidas pedagógicas sobre a feira e suas missões.
+              </p>
+              <button
+                onClick={() => setNiaOpen(true)}
+                className="mt-3 w-full rounded-xl bg-[#8ee85f] py-2.5 font-extrabold text-[#10160e] hover:bg-[#a6f07b] transition-all text-xs"
+              >
+                Falar com NIA
+              </button>
+            </div>
+
+            <div className="rounded-2xl border border-white/20 bg-[#111923] p-4">
+              <div className="mb-3 text-sm font-bold text-[#8ee85f]">🎮 ÁREA DE JOGOS & CAFÉ</div>
+              <div className="space-y-2 text-xs">
+                <div className="rounded-xl bg-white/5 p-2.5 border border-white/10">
+                  <div className="font-bold text-emerald-300">⚽ Futebol 2D</div>
+                  <div className="text-[10px] text-white/50">Campo no mapa central</div>
+                </div>
+                <div className="rounded-xl bg-white/5 p-2.5 border border-white/10">
+                  <div className="font-bold text-emerald-300">🏓 Ping-Pong 2D</div>
+                  <div className="text-[10px] text-white/50">Mesa na área de jogos</div>
+                </div>
+                <div className="rounded-xl bg-white/5 p-2.5 border border-white/10">
+                  <div className="font-bold text-amber-300">☕ Café da Ubongo</div>
+                  <div className="text-[10px] text-white/50">Bônus de velocidade na cantina</div>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+
+      {/* NIA Modal */}
+      {niaOpen && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-3xl border-2 border-[#8ee85f]/40 bg-[#111923] p-6 shadow-2xl">
+            <div className="mb-2 flex items-center justify-between border-b border-white/10 pb-3">
+              <div>
+                <h2 className="text-lg font-extrabold text-[#8ee85f]">NIA · Consultora Ubongo</h2>
+                <p className="text-[11px] text-white/50">IA imersiva do Missão Construtores</p>
+              </div>
+              <button onClick={() => setNiaOpen(false)} className="rounded-full bg-white/10 p-1.5 text-xs text-white/70 hover:bg-white/20">
+                ✖
+              </button>
+            </div>
+
+            {niaReply && (
+              <div className="mb-4 rounded-2xl bg-white/10 p-3.5 text-xs leading-relaxed border border-white/10">
+                {niaReply}
+              </div>
+            )}
+
+            <textarea
+              value={niaMessage}
+              onChange={(event) => setNiaMessage(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  void askNia();
+                }
+              }}
+              placeholder="Pergunte sobre as missões da sua equipe..."
+              className="min-h-24 w-full rounded-2xl border border-white/20 bg-black/40 p-3 text-xs text-white placeholder-white/40 focus:border-[#8ee85f] focus:outline-none"
+            />
+
+            <button
+              disabled={niaLoading}
+              onClick={() => void askNia()}
+              className="mt-3 w-full rounded-2xl bg-[#8ee85f] py-3 font-extrabold text-[#10160e] hover:bg-[#a6f07b] transition-all text-xs shadow-lg"
+            >
+              {niaLoading ? "Pensando..." : "Enviar Pergunta"}
+            </button>
+          </div>
+        </div>
+      )}
+    </main>
+  );
 }

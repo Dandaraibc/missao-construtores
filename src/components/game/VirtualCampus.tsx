@@ -4,8 +4,11 @@ import * as Phaser from "phaser";
 import { MultiplayerClient } from "@/game/network/MultiplayerClient";
 import { getChat, sendChatMessage } from "@/lib/rooms";
 import { ChatMessage } from "@/types/room";
+import PingPongModal from "./PingPongModal";
+import MeetingModal from "./MeetingModal";
+import RpgMissionModal from "../missions/RpgMissionModal";
 
-type Role = "STUDENT" | "TEACHER" | "UBONGO_ADMIN" | "SUPER_ADMIN";
+type Role = "STUDENT" | "TEACHER" | "UBONGO_ADMIN" | "SUPER_ADMIN" | "VISITOR";
 type MicState = "MIC_MUTED" | "MIC_ON" | "MIC_DENIED" | "MIC_UNAVAILABLE";
 type AudioState = "AUDIO_ON" | "AUDIO_MUTED";
 
@@ -31,9 +34,6 @@ const doors = [
   { label: "Sala de Reunião", team: null, x: 1450, y: 180 },
 ];
 
-const canEnter = (team: string | null, role: Role, current?: string) =>
-  !team || team === current || role !== "STUDENT";
-
 const meetingSeats = [
   { x: 520, y: 420 },
   { x: 590, y: 420 },
@@ -50,6 +50,17 @@ const npcList: (PlayerTarget & { x: number; y: number })[] = [
   { name: "Dandara", role: "Ubongo Admin", team: "ubongo", x: 1275, y: 510 },
   { name: "Prof. Niltes", role: "Professora", team: "professores", x: 790, y: 190 },
   { name: "Prof. Diego", role: "Professor", team: "professores", x: 900, y: 190 },
+];
+
+const computerDesks = [
+  { x: 1075, y: 470, team: "ubongo", label: "Estação Ubongo Admin (Charles)" },
+  { x: 1175, y: 470, team: "ubongo", label: "Estação Ubongo Admin (Prietto)" },
+  { x: 1275, y: 470, team: "ubongo", label: "Estação Ubongo Admin (Dandara)" },
+  { x: 790, y: 150, team: "professores", label: "Estação Professores (Prof. Niltes)" },
+  { x: 900, y: 150, team: "professores", label: "Estação Professores (Prof. Diego)" },
+  { x: 250, y: 150, team: "design", label: "Estação Equipe Criativa (Design)" },
+  { x: 720, y: 150, team: "pesquisa", label: "Estação Equipe Descobertas (Pesquisa)" },
+  { x: 1020, y: 150, team: "produto", label: "Estação Equipe Ideias (Produto)" },
 ];
 
 function getAudioZone(x: number, y: number): { id: string; name: string } {
@@ -77,7 +88,8 @@ function avatar(
   y: number,
   shirt: number,
   name: string,
-  skinTone = 0xf0b38c
+  skinTone = 0xf0b38c,
+  isOffline = false
 ) {
   const c = scene.add.container(x, y);
   const skin = skinTone;
@@ -86,7 +98,16 @@ function avatar(
   waves.setName("speakingWaves");
   waves.setVisible(false);
 
-  c.add([
+  let zzzText: Phaser.GameObjects.Text | null = null;
+  if (isOffline) {
+    zzzText = scene.add.text(8, -26, "Zzz...", {
+      fontFamily: "monospace",
+      fontSize: "10px",
+      color: "#93c5fd",
+    });
+  }
+
+  const items: Phaser.GameObjects.GameObject[] = [
     scene.add.ellipse(0, 15, 28, 8, 0x263238, 0.38),
     scene.add.rectangle(-5, 12, 5, 10, 0x26364b),
     scene.add.rectangle(5, 12, 5, 10, 0x26364b),
@@ -100,15 +121,19 @@ function avatar(
     scene.add.rectangle(4, -9, 2, 2, 0x182333),
     waves,
     scene
-      .add.text(0, -37, name, {
+      .add.text(0, -37, name + (isOffline ? " (Zzz)" : ""), {
         fontFamily: "monospace",
         fontSize: "11px",
-        color: "#182333",
-        backgroundColor: "#fff8df",
+        color: isOffline ? "#64748b" : "#182333",
+        backgroundColor: isOffline ? "#e2e8f0" : "#fff8df",
         padding: { x: 4, y: 2 },
       })
       .setOrigin(0.5),
-  ]);
+  ];
+
+  if (zzzText) items.push(zzzText);
+
+  c.add(items);
 
   (c as unknown as { setSpeaking: (speaking: boolean) => void }).setSpeaking = (
     speaking: boolean
@@ -142,6 +167,12 @@ export default function VirtualCampus({
   const [prompt, setPrompt] = useState(promptRef.current);
   const [online, setOnline] = useState(1);
   const [currentAudioZone, setCurrentAudioZone] = useState("AREA_CENTRAL");
+
+  // Modals & Interactive Minigames
+  const [showPingPong, setShowPingPong] = useState(false);
+  const [showMeetingModal, setShowMeetingModal] = useState(false);
+  const [showRpgMission, setShowRpgMission] = useState(false);
+  const [hasCoffeeEffect, setHasCoffeeEffect] = useState(false);
 
   // 1. Microphone States & Controls (MIC_MUTED, MIC_ON, MIC_DENIED, MIC_UNAVAILABLE)
   const [micState, setMicState] = useState<MicState>("MIC_MUTED");
@@ -198,7 +229,6 @@ export default function VirtualCampus({
     return () => window.removeEventListener("new_chat_message", handleNewMessage);
   }, [chatOpen, chatTab, teamSlug]);
 
-  // Synchronize chat messages when tab changes
   useEffect(() => {
     const roomId =
       chatTab === "area" ? "area" : chatTab === "team" ? `team-${teamSlug}` : "meeting";
@@ -220,7 +250,6 @@ export default function VirtualCampus({
     setChatText("");
   };
 
-  // 1. Microphone Control Function (Explicit user action & permission handling)
   const toggleMicrophone = async () => {
     if (micState === "MIC_ON") {
       micStream.current?.getTracks().forEach((track) => {
@@ -239,7 +268,6 @@ export default function VirtualCampus({
       });
       setMicState("MIC_ON");
 
-      // Web Audio API speech volume analysis
       try {
         const AudioContextClass =
           window.AudioContext ||
@@ -285,7 +313,6 @@ export default function VirtualCampus({
     }
   };
 
-  // 2. Audio Listening Control Function (Independent from Mic)
   const toggleAudioListening = () => {
     setAudioState((prev) => (prev === "AUDIO_ON" ? "AUDIO_MUTED" : "AUDIO_ON"));
   };
@@ -325,30 +352,12 @@ export default function VirtualCampus({
         this.drawBongoRoom();
         this.drawTeachersRoom();
         this.drawCafeteria();
-        this.add
-          .text(1050, 350, "SALA DO BONGO", {
-            fontFamily: "monospace",
-            fontSize: "12px",
-            color: "#dfffe5",
-            backgroundColor: "#315f4c",
-            padding: { x: 5, y: 2 },
-          })
-          .setDepth(4);
+        this.drawPingPongTable();
+        this.drawOfflineStudents();
 
         this.time.delayedCall(120, () => {
           this.cameras.main.setZoom(1.2);
           this.ball?.setVisible(true).setScale(1.2);
-        });
-
-        this.time.delayedCall(500, () => {
-          this.children.list
-            .filter(
-              (child) =>
-                child.type === "Text" &&
-                ((child as Phaser.GameObjects.Text).text === "HISTÓRIA" ||
-                  (child as Phaser.GameObjects.Text).text === "SALA DOS PROFESSORES")
-            )
-            .forEach((child) => child.destroy());
         });
 
         this.time.addEvent({
@@ -368,6 +377,7 @@ export default function VirtualCampus({
         this.cameras.main.setZoom(0.9);
         this.cameras.main.setBackgroundColor("#172b42");
         this.add.image(768, 512, "office-art").setDepth(-10);
+
         this.add
           .text(110, 35, "DESCOBERTAS", {
             fontFamily: "monospace",
@@ -405,15 +415,6 @@ export default function VirtualCampus({
           })
           .setDepth(-5);
         this.add
-          .text(1200, 350, "HISTÓRIA", {
-            fontFamily: "monospace",
-            fontSize: "16px",
-            color: "#fff8df",
-            backgroundColor: "#6d4b94",
-            padding: { x: 7, y: 4 },
-          })
-          .setDepth(-5);
-        this.add
           .text(580, 390, "SALA CENTRAL · 22 LUGARES", {
             fontFamily: "monospace",
             fontSize: "15px",
@@ -424,7 +425,7 @@ export default function VirtualCampus({
           .setDepth(-5);
 
         this.ball = this.add
-          .circle(1330, 800, 7, 0xffffff)
+          .circle(320, 560, 7, 0xffffff)
           .setStrokeStyle(2, 0x23302f)
           .setDepth(3)
           .setVisible(false);
@@ -439,7 +440,6 @@ export default function VirtualCampus({
         >;
         this.input.keyboard!.on("keydown-E", () => this.interact());
 
-        // Pointer click-to-move support
         this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
           if (seated) return;
           const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
@@ -548,7 +548,7 @@ export default function VirtualCampus({
         this.add
           .text(1250, 65, "CANTINA / LANCHONETE", {
             fontFamily: "monospace",
-            fontSize: "15px",
+            fontSize: "14px",
             color: "#fff8df",
             backgroundColor: "#8a603e",
             padding: { x: 8, y: 4 },
@@ -558,12 +558,38 @@ export default function VirtualCampus({
         this.add.rectangle(1270, 180, 28, 22, 0x394852);
         this.add.circle(1400, 180, 13, 0x4b8fd3);
         this.add
-          .text(1330, 230, "CAFÉ  •  LANCHES", {
+          .text(1330, 230, "☕ CAFÉ DA UBONGO", {
             fontFamily: "monospace",
             fontSize: "11px",
             color: "#754c3b",
           })
           .setOrigin(0.5);
+      }
+
+      drawPingPongTable() {
+        this.add.rectangle(1330, 800, 110, 65, 0x2e6f40).setStrokeStyle(3, 0x1a4526).setDepth(2);
+        this.add.rectangle(1330, 800, 4, 65, 0xffffff).setDepth(3);
+        this.add
+          .text(1330, 755, "🏓 PING-PONG 2D", {
+            fontFamily: "monospace",
+            fontSize: "12px",
+            color: "#8ee85f",
+            backgroundColor: "#182333",
+            padding: { x: 4, y: 2 },
+          })
+          .setOrigin(0.5)
+          .setDepth(4);
+      }
+
+      drawOfflineStudents() {
+        for (const [x, y, name] of [
+          [200, 220, "Matheus"],
+          [450, 220, "Arthur"],
+          [850, 220, "Maria"],
+        ] as [number, number, string][]) {
+          const off = avatar(this, x, y, 0x4b729f, name, 0xf0b38c, true);
+          off.setDepth(4);
+        }
       }
 
       blocked(x: number, y: number) {
@@ -602,6 +628,35 @@ export default function VirtualCampus({
           return;
         }
 
+        // Check Coffee Counter
+        if (Phaser.Math.Distance.Between(local.x, local.y, 1330, 180) < 70) {
+          setHasCoffeeEffect(true);
+          safeSetPrompt("☕ Efeito Café ativado! Sua velocidade aumentou temporariamente.");
+          return;
+        }
+
+        // Check Ping Pong Table
+        if (Phaser.Math.Distance.Between(local.x, local.y, 1330, 800) < 80) {
+          setShowPingPong(true);
+          return;
+        }
+
+        // Check Computer Desks
+        const desk = computerDesks.find(
+          (d) => Phaser.Math.Distance.Between(local!.x, local!.y, d.x, d.y) < 65
+        );
+        if (desk) {
+          setShowRpgMission(true);
+          return;
+        }
+
+        // Check Meeting Table
+        if (Phaser.Math.Distance.Between(local.x, local.y, 650, 420) < 110) {
+          setShowMeetingModal(true);
+          return;
+        }
+
+        // Check NPCs
         const targetNpc = npcList.find(
           (npc) => Phaser.Math.Distance.Between(local!.x, local!.y, npc.x, npc.y) < 80
         );
@@ -630,7 +685,7 @@ export default function VirtualCampus({
         );
         if (d)
           safeSetPrompt(
-            canEnter(d.team, propsRef.current.role, propsRef.current.teamSlug)
+            d.team === null || d.team === propsRef.current.teamSlug || propsRef.current.role !== "STUDENT"
               ? `E — Entrar em ${d.label}`
               : `Missão exclusiva da Equipe ${d.team}`
           );
@@ -639,12 +694,10 @@ export default function VirtualCampus({
       update(time: number, delta: number) {
         if (!local) return;
 
-        // Synchronize speaking indicator graphics on avatar
         if (local.setSpeaking) {
           local.setSpeaking(isSpeakingRef.current);
         }
 
-        // Calculate active Audio Zone
         const zoneInfo = getAudioZone(local.x, local.y);
         setCurrentAudioZone(zoneInfo.name);
 
@@ -654,7 +707,6 @@ export default function VirtualCampus({
           return;
         }
 
-        // Automatic unstick algorithm
         if (this.blocked(local.x, local.y)) {
           for (let offset = 2; offset <= 30; offset += 2) {
             if (!this.blocked(local.x, local.y + offset)) {
@@ -680,7 +732,8 @@ export default function VirtualCampus({
         const oy = local.y;
         let dir = "down";
 
-        const moveStep = (260 * delta) / 1000;
+        const speedMult = hasCoffeeEffect ? 1.4 : 1.0;
+        const moveStep = (260 * speedMult * delta) / 1000;
         const j = joystickRef.current;
         let dx = 0;
         let dy = 0;
@@ -706,7 +759,6 @@ export default function VirtualCampus({
           targetPos = null;
         }
 
-        // Pointer click-to-move
         if (dx === 0 && dy === 0 && targetPos) {
           const dist = Phaser.Math.Distance.Between(local.x, local.y, targetPos.x, targetPos.y);
           if (dist < 6) {
@@ -723,7 +775,6 @@ export default function VirtualCampus({
           }
         }
 
-        // Collision sliding
         if (dx !== 0) {
           const nextX = Phaser.Math.Clamp(local.x + dx, 40, 1490);
           if (!this.blocked(nextX, local.y)) {
@@ -741,7 +792,6 @@ export default function VirtualCampus({
           }
         }
 
-        // Throttled network updates
         if ((local.x !== ox || local.y !== oy) && time - lastMoveTime > 40) {
           lastMoveTime = time;
           network.sendMove(local.x, local.y, dir);
@@ -786,11 +836,34 @@ export default function VirtualCampus({
           if (Phaser.Math.Distance.Between(local.x, local.y, this.ball.x, this.ball.y) < 28) {
             this.ballVelocity = local.x < this.ball.x ? 4 : -4;
             this.ballVertical = local.y < this.ball.y ? 2 : -2;
-            safeSetPrompt("Você chutou a bola");
+            safeSetPrompt("⚽ Você chutou a bola no campo de futebol 2D!");
           }
         }
 
-        // Proximity prompts & target tracking
+        // Interactivity Prompts
+        if (Phaser.Math.Distance.Between(local.x, local.y, 1330, 180) < 70) {
+          safeSetPrompt("E — TOMAR CAFÉ DA UBONGO (Bônus de Velocidade)");
+          return;
+        }
+
+        if (Phaser.Math.Distance.Between(local.x, local.y, 1330, 800) < 80) {
+          safeSetPrompt("E — JOGAR PING-PONG 2D");
+          return;
+        }
+
+        const desk = computerDesks.find(
+          (d) => Phaser.Math.Distance.Between(local!.x, local!.y, d.x, d.y) < 65
+        );
+        if (desk) {
+          safeSetPrompt(`E — USAR COMPUTADOR (${desk.label})`);
+          return;
+        }
+
+        if (Phaser.Math.Distance.Between(local.x, local.y, 650, 420) < 110) {
+          safeSetPrompt("E — ENTRAR NA REUNIÃO CENTRAL / LINK EXTERNO");
+          return;
+        }
+
         const targetNpc = npcList.find(
           (npc) => Phaser.Math.Distance.Between(local!.x, local!.y, npc.x, npc.y) < 80
         );
@@ -810,10 +883,10 @@ export default function VirtualCampus({
             );
             safeSetPrompt(
               d
-                ? canEnter(d.team, propsRef.current.role, propsRef.current.teamSlug)
+                ? d.team === null || d.team === propsRef.current.teamSlug || propsRef.current.role !== "STUDENT"
                   ? `E — Entrar em ${d.label}`
                   : `Missão exclusiva da Equipe ${d.team}`
-                : "Explore o Office · aproxime-se de uma pessoa · use WASD/Setas ou clique no mapa"
+                : "Explore o Office · aproximar para interagir · WASD/Setas ou toque"
             );
           }
         }
@@ -838,7 +911,7 @@ export default function VirtualCampus({
       void network.leave();
       game.destroy(true);
     };
-  }, [audioState]);
+  }, [audioState, hasCoffeeEffect]);
 
   const key = (value: string) => window.dispatchEvent(new KeyboardEvent("keydown", { key: value }));
   const setJoystick = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -858,7 +931,6 @@ export default function VirtualCampus({
 
       {/* PERMANENT SOCIAL HUD (Desktop & Mobile - Bottom Right position) */}
       <div className="absolute right-3 bottom-16 sm:bottom-4 flex flex-wrap items-center gap-2 rounded-2xl border border-white/20 bg-[#182333]/95 p-2.5 text-xs font-semibold text-white shadow-2xl backdrop-blur-md z-30">
-        {/* Online Status & AudioZone indicator */}
         <div className="hidden sm:flex items-center gap-1.5 rounded-xl bg-white/10 px-2.5 py-1.5 text-[11px]">
           <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
           <span>{online} Online</span>
@@ -866,7 +938,7 @@ export default function VirtualCampus({
           <span className="text-emerald-300 font-mono">{currentAudioZone}</span>
         </div>
 
-        {/* 1. MICROPHONE CONTROL BUTTON (MIC_ON, MIC_MUTED, MIC_DENIED, MIC_UNAVAILABLE) */}
+        {/* 1. MICROPHONE CONTROL BUTTON */}
         <button
           aria-label="Controle de Microfone"
           onClick={toggleMicrophone}
@@ -892,7 +964,7 @@ export default function VirtualCampus({
           {isSpeaking && <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />}
         </button>
 
-        {/* 2. AUDIO LISTENING CONTROL BUTTON (AUDIO_ON, AUDIO_MUTED) */}
+        {/* 2. AUDIO LISTENING CONTROL BUTTON */}
         <button
           aria-label="Controle de Áudio"
           onClick={toggleAudioListening}
@@ -950,7 +1022,7 @@ export default function VirtualCampus({
         </div>
       )}
 
-      {/* PLAYER INTERACTION MODAL / OPTIONS */}
+      {/* PLAYER INTERACTION MODAL */}
       {interactionModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-sm p-4">
           <div className="w-full max-w-sm rounded-3xl border-2 border-emerald-500/40 bg-[#182333] p-6 text-white shadow-2xl">
@@ -981,9 +1053,6 @@ export default function VirtualCampus({
                 <span className="text-white/50">Roteamento AudioZone:</span>
                 <span className="font-bold text-emerald-400">{currentAudioZone}</span>
               </div>
-              <div className="text-[10px] text-white/40 italic">
-                A voz só é transmitida entre usuários na mesma AudioZone sem vazamento para outras salas.
-              </div>
             </div>
 
             <div className="space-y-2 pt-2">
@@ -1011,12 +1080,28 @@ export default function VirtualCampus({
         </div>
       )}
 
+      {/* MINIGAMES & SPECIAL MODALS */}
+      {showPingPong && <PingPongModal onClose={() => setShowPingPong(false)} />}
+      {showMeetingModal && (
+        <MeetingModal
+          onClose={() => setShowMeetingModal(false)}
+          userRole={role}
+          displayName={displayName}
+        />
+      )}
+      {showRpgMission && (
+        <RpgMissionModal
+          onClose={() => setShowRpgMission(false)}
+          teamSlug={teamSlug}
+        />
+      )}
+
       {/* BOTTOM PROMPT BAR */}
       <div className="absolute bottom-4 left-4 rounded-xl bg-[#182333]/90 px-4 py-2 text-sm font-bold text-white shadow-lg border border-white/10">
         {prompt}
       </div>
 
-      {/* CONTEXTUAL CHAT PANEL WITH UNREAD BADGES & CHANNELS */}
+      {/* CONTEXTUAL CHAT PANEL */}
       {chatOpen && (
         <div className="absolute right-3 top-14 w-84 max-w-[90vw] rounded-2xl border border-white/20 bg-[#182333]/95 p-4 text-xs text-white shadow-2xl backdrop-blur-xl z-40">
           <div className="mb-3 flex items-center justify-between border-b border-white/10 pb-2">
@@ -1029,7 +1114,6 @@ export default function VirtualCampus({
             </button>
           </div>
 
-          {/* CHAT CHANNELS TABS */}
           <div className="mb-3 flex gap-1 rounded-xl bg-black/30 p-1">
             <button
               onClick={() => setChatTab("area")}
@@ -1057,7 +1141,6 @@ export default function VirtualCampus({
             </button>
           </div>
 
-          {/* CHAT MESSAGES LIST */}
           <div className="mb-3 h-52 overflow-y-auto space-y-2 rounded-xl bg-black/25 p-2.5 border border-white/5">
             {chatMessages.length === 0 ? (
               <div className="flex h-full items-center justify-center text-white/40 italic">
@@ -1086,7 +1169,6 @@ export default function VirtualCampus({
             )}
           </div>
 
-          {/* CHAT INPUT FORM */}
           <div className="flex gap-2">
             <input
               type="text"
@@ -1104,10 +1186,6 @@ export default function VirtualCampus({
             >
               Enviar
             </button>
-          </div>
-
-          <div className="mt-2 text-[10px] text-white/40 text-center">
-            🔒 Mensagens privadas entre alunos desativadas nesta versão.
           </div>
         </div>
       )}
