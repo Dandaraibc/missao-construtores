@@ -381,8 +381,11 @@ export default function VirtualCampus({
       }
 
       create() {
+        // Set World Bounds to match the image size
         this.cameras.main.setBounds(0, 0, 1536, 1024);
-        this.cameras.main.setZoom(1.0);
+        
+        // HABBO / GATHER STYLE ZOOM: Zoom in heavily so characters feel normal sized!
+        this.cameras.main.setZoom(2.8);
         this.cameras.main.setBackgroundColor("#0b0f17");
 
         const bg = this.add.image(768, 512, "office-art").setDepth(-10);
@@ -402,7 +405,9 @@ export default function VirtualCampus({
 
         local = avatar(this, 760, 520, 0xf26b5b, propsRef.current.displayName);
         local.setDepth(520);
-        this.cameras.main.startFollow(local, true, 0.15, 0.15);
+        
+        // Strict follow with a bit of lerp for smoothness
+        this.cameras.main.startFollow(local, true, 0.1, 0.1);
 
         this.cursors = this.input.keyboard!.createCursorKeys();
         this.keys = this.input.keyboard!.addKeys("W,A,S,D,E") as Record<
@@ -532,21 +537,25 @@ export default function VirtualCampus({
 
       // Precise Solid Walls & Furniture Collisions (Gather/Habbo style)
       blocked(x: number, y: number) {
-        const r = 8;
-        // Outer boundaries
-        if (x - r < 50 || x + r > 1480 || y - r < 60 || y + r > 960) {
+        const r = 12; // Player radius
+        // Outer boundaries of the playable office area
+        if (x - r < 90 || x + r > 1450 || y - r < 100 || y + r > 950) {
           return true;
         }
 
-        // Room Dividers and Solid Furniture
-        const furnitureBoxes = [
-          [1100, 480, 340, 50], // Ubongo admin desks
-          [730, 130, 220, 50],  // Teacher desks
-          [1220, 120, 200, 40], // Cafeteria counter
-          [500, 410, 400, 50],  // Central meeting table
+        // Room Dividers and Solid Furniture (adjusted for the actual map art)
+        const solidBoxes = [
+          [200, 400, 1150, 20], // Main horizontal wall dividing top and bottom rooms
+          [580, 100, 20, 300],  // Vertical wall 1
+          [980, 100, 20, 300],  // Vertical wall 2
+          [480, 480, 420, 120], // Central meeting table (huge in the center)
+          [1100, 480, 340, 100], // Ubongo admin desks area
+          [200, 120, 200, 80], // Design desks
+          [680, 120, 200, 80], // Pesquisa desks
+          [1000, 120, 200, 80], // Produto desks
         ];
 
-        return furnitureBoxes.some(
+        return solidBoxes.some(
           ([wx, wy, ww, wh]) => x + r > wx && x - r < wx + ww && y + r > wy && y - r < wy + wh
         );
       }
@@ -686,17 +695,21 @@ export default function VirtualCampus({
           }
         }
 
-        // Smooth Wall Sliding Collision Logic
+        // Smooth Wall Sliding Collision Logic (Habbo style slide)
         if (dx !== 0) {
-          const nextX = Phaser.Math.Clamp(local.x + dx, 40, 1490);
+          const nextX = local.x + dx;
           if (!this.blocked(nextX, local.y)) {
             local.x = nextX;
+          } else {
+            targetPos = null; // stop pathfinding on hit
           }
         }
         if (dy !== 0) {
-          const nextY = Phaser.Math.Clamp(local.y + dy, 50, 970);
+          const nextY = local.y + dy;
           if (!this.blocked(local.x, nextY)) {
             local.y = nextY;
+          } else {
+            targetPos = null; // stop pathfinding on hit
           }
         }
 
