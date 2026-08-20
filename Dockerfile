@@ -9,4 +9,5 @@ ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 RUN npx prisma generate
 RUN npx next build --webpack
 EXPOSE 3000
-CMD ["npm", "run", "start"]
+EXPOSE 2567
+CMD ["sh", "-c", "npx tsx server/realtime.ts & npm run start"]
