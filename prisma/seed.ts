@@ -1,6 +1,12 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
-import argon2 from "argon2";
+import { scryptSync, randomBytes } from "node:crypto";
+
+function hashPasswordSync(password: string) {
+  const salt = randomBytes(16).toString("hex");
+  const hashedPassword = scryptSync(password, salt, 64).toString("hex");
+  return `${salt}:${hashedPassword}`;
+}
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
@@ -20,11 +26,11 @@ const accounts = [
 
 async function main() {
   for (const [slug, name, color, icon] of teams) await prisma.team.upsert({ where: { slug }, update: { name, color, icon }, create: { slug, name, color, icon } });
-  const passwordHash = await argon2.hash(process.env.SEED_ADMIN_PASSWORD || "change-me-now", { type: argon2.argon2id });
+  const passwordHash = hashPasswordSync(process.env.SEED_ADMIN_PASSWORD || "change-me-now");
   await prisma.user.upsert({ where: { username: "admin" }, update: { passwordHash, role: "SUPER_ADMIN", status: "ACTIVE" }, create: { username: "admin", displayName: "Administrador Ubongo", shortName: "Admin", passwordHash, role: "SUPER_ADMIN" } });
   for (const [username, displayName, role, password, teamSlug] of accounts) {
-    const passwordHash = await argon2.hash(password, { type: argon2.argon2id });
-    const user = await prisma.user.upsert({ where: { username }, update: { displayName, shortName: displayName, passwordHash, role, status: "ACTIVE" }, create: { username, displayName, shortName: displayName, passwordHash, role, status: "ACTIVE" } });
+    const passwordHash = hashPasswordSync(password);
+    const user = await prisma.user.upsert({ where: { username }, update: { displayName, shortName: displayName, passwordHash, role: "STUDENT", status: "ACTIVE" }, create: { username, displayName, shortName: displayName, passwordHash, role: "STUDENT", status: "ACTIVE" } });
     if (teamSlug) { await prisma.team.update({ where: { slug: teamSlug }, data: { users: { connect: { id: user.id } } } }); }
   }
   await prisma.projectSetting.upsert({ where: { id: "project-missao-construtores" }, update: {}, create: { id: "project-missao-construtores", projectName: "Missão Construtores", startsAt: new Date(), projectDeadline: new Date("2026-09-04T23:59:00-03:00"), timezone: "America/Sao_Paulo" } });
