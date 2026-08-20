@@ -20,7 +20,7 @@ export default function HomePage() {
       <div className="text-center max-w-lg">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#E8F6F0] border border-[#315F4C]/15 text-[#315F4C] text-sm mb-6">
           <span className="w-1.5 h-1.5 rounded-full bg-[#39FF14]"></span>
-          Colégio 21 de Maio
+          Colégio 24 de Maio
         </div>
 
         <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-[#1C1C1C] mb-4 leading-tight">

@@ -30,7 +30,7 @@ export const HAIR_STYLES: { id: HairStyle; label: string }[] = [
 ];
 
 export const OUTFITS: { id: Outfit; label: string }[] = [
-  { id: "uniform", label: "Uniforme Colégio 21 de Maio" },
+  { id: "uniform", label: "Uniforme Colégio 24 de Maio" },
   { id: "casual", label: "Casual" },
 ];
 

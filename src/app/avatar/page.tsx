@@ -67,7 +67,7 @@ export default function AvatarPage() {
       <header className="border-b border-[#EDE7DC] bg-white">
         <div className="max-w-4xl mx-auto px-5 py-4">
           <h1 className="font-semibold text-[#1C1C1C]">Crie seu avatar</h1>
-          <p className="text-sm text-[#1C1C1C]/50">Colégio 21 de Maio · Missão Construtores</p>
+          <p className="text-sm text-[#1C1C1C]/50">Colégio 24 de Maio · Missão Construtores</p>
         </div>
       </header>
 
@@ -110,7 +110,7 @@ export default function AvatarPage() {
                 >
                   {config.outfit === "uniform" && (
                     <div className="text-yellow-300 text-[10px] font-bold text-center leading-tight">
-                      21
+                      24
                       <br />
                       DE MAIO
                     </div>

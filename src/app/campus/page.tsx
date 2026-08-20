@@ -2,12 +2,14 @@
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import NiaVoiceButton from "@/components/nia/NiaVoiceButton";
+import RoomPanel from "@/components/RoomPanel";
 const VirtualCampus = dynamic(() => import("@/components/game/VirtualCampus"), { ssr: false });
 export default function CampusPage() {
   const [niaOpen, setNiaOpen] = useState(false);
   const [niaMessage, setNiaMessage] = useState("");
   const [niaReply, setNiaReply] = useState("");
   const [niaLoading, setNiaLoading] = useState(false);
+  const [roomChatOpen, setRoomChatOpen] = useState(false);
   const [avatar, setAvatar] = useState<{ name: string; teamSlug?: string } | null>(null);
   useEffect(() => { const raw = localStorage.getItem("missao-avatar"); if (raw) setAvatar(JSON.parse(raw)); }, []);
   const name = avatar?.name || "Dandara";
