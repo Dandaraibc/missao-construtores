@@ -76,8 +76,8 @@ export default function VirtualCampus({
 }: Props) {
   const mountRef = useRef<HTMLDivElement>(null);
   const joystickRef = useRef({ x: 0, y: 0 });
-  const promptRef = useRef("Explore o Office · aproxime-se de uma porta ou pessoa");
-  const [prompt, setPrompt] = useState("Explore o Office · aproxime-se de uma porta ou pessoa");
+  const promptRef = useRef("Explore o Office · aproxime-se de uma porta ou pessoa · use WASD/Setas ou clique no mapa");
+  const [prompt, setPrompt] = useState(promptRef.current);
   const [online, setOnline] = useState(1);
   const [micOn, setMicOn] = useState(false);
   const [audioOn, setAudioOn] = useState(true);
@@ -87,6 +87,12 @@ export default function VirtualCampus({
     typeof window === "undefined" ? [] : getChat("area").slice(-20)
   );
   const micStream = useRef<MediaStream | null>(null);
+
+  // Store props in refs so useEffect never destroys game on prop changes
+  const propsRef = useRef({ displayName, role, teamSlug, userId, onNiaInteract });
+  useEffect(() => {
+    propsRef.current = { displayName, role, teamSlug, userId, onNiaInteract };
+  }, [displayName, role, teamSlug, userId, onNiaInteract]);
 
   const safeSetPrompt = (msg: string) => {
     if (promptRef.current !== msg) {
@@ -131,6 +137,7 @@ export default function VirtualCampus({
     let seated = false;
     let occupiedSeat: { x: number; y: number } | undefined;
     let lastMoveTime = 0;
+    let targetPos: { x: number; y: number } | null = null;
 
     class OfficeScene extends Phaser.Scene {
       cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -256,7 +263,7 @@ export default function VirtualCampus({
           .setDepth(3)
           .setVisible(false);
 
-        local = avatar(this, 760, 520, 0xf26b5b, displayName);
+        local = avatar(this, 760, 520, 0xf26b5b, propsRef.current.displayName);
         this.cameras.main.startFollow(local, true, 0.1, 0.1);
 
         this.cursors = this.input.keyboard!.createCursorKeys();
@@ -266,8 +273,21 @@ export default function VirtualCampus({
         >;
         this.input.keyboard!.on("keydown-E", () => this.interact());
 
+        // Pointer click-to-move support
+        this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+          if (seated) return;
+          const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+          if (worldPoint.x >= 40 && worldPoint.x <= 1490 && worldPoint.y >= 50 && worldPoint.y <= 970) {
+            targetPos = { x: worldPoint.x, y: worldPoint.y };
+          }
+        });
+
         void network
-          .join("office", "", { userId, displayName, teamSlug })
+          .join("office", "", {
+            userId: propsRef.current.userId,
+            displayName: propsRef.current.displayName,
+            teamSlug: propsRef.current.teamSlug,
+          })
           .then((room) => {
             const state = room.state as unknown as {
               players: {
@@ -376,7 +396,7 @@ export default function VirtualCampus({
       }
 
       blocked(x: number, y: number) {
-        const r = 12;
+        const r = 10;
         const walls = [
           [0, 0, 1536, 16],
           [0, 1008, 1536, 16],
@@ -421,7 +441,7 @@ export default function VirtualCampus({
           return;
         }
         if (Phaser.Math.Distance.Between(local.x, local.y, this.nia.x, this.nia.y) < 80) {
-          onNiaInteract?.();
+          propsRef.current.onNiaInteract?.();
           return;
         }
         const d = doors.find(
@@ -429,7 +449,7 @@ export default function VirtualCampus({
         );
         if (d)
           safeSetPrompt(
-            canEnter(d.team, role, teamSlug)
+            canEnter(d.team, propsRef.current.role, propsRef.current.teamSlug)
               ? `E — Entrar em ${d.label}`
               : `Missão exclusiva da Equipe ${d.team}`
           );
@@ -444,12 +464,34 @@ export default function VirtualCampus({
           return;
         }
 
+        // Automatic unstick algorithm: if player is inside a wall boundary, push outward
+        if (this.blocked(local.x, local.y)) {
+          for (let offset = 2; offset <= 30; offset += 2) {
+            if (!this.blocked(local.x, local.y + offset)) {
+              local.y += offset;
+              break;
+            }
+            if (!this.blocked(local.x, local.y - offset)) {
+              local.y -= offset;
+              break;
+            }
+            if (!this.blocked(local.x + offset, local.y)) {
+              local.x += offset;
+              break;
+            }
+            if (!this.blocked(local.x - offset, local.y)) {
+              local.x -= offset;
+              break;
+            }
+          }
+        }
+
         const ox = local.x;
         const oy = local.y;
         let dir = "down";
 
-        // Delta-based movement speed (240 pixels per second)
-        const moveStep = (240 * delta) / 1000;
+        // Delta-based movement speed (260 pixels per second)
+        const moveStep = (260 * delta) / 1000;
         const j = joystickRef.current;
         let dx = 0;
         let dy = 0;
@@ -457,31 +499,56 @@ export default function VirtualCampus({
         if (this.cursors.left.isDown || this.keys.A.isDown || j.x < -0.18) {
           dx -= moveStep;
           dir = "left";
+          targetPos = null;
         }
         if (this.cursors.right.isDown || this.keys.D.isDown || j.x > 0.18) {
           dx += moveStep;
           dir = "right";
+          targetPos = null;
         }
         if (this.cursors.up.isDown || this.keys.W.isDown || j.y < -0.18) {
           dy -= moveStep;
           dir = "up";
+          targetPos = null;
         }
         if (this.cursors.down.isDown || this.keys.S.isDown || j.y > 0.18) {
           dy += moveStep;
           dir = "down";
+          targetPos = null;
         }
 
-        // Predictive smooth collision sliding: check X and Y separately
+        // Pointer click-to-move target processing
+        if (dx === 0 && dy === 0 && targetPos) {
+          const dist = Phaser.Math.Distance.Between(local.x, local.y, targetPos.x, targetPos.y);
+          if (dist < 6) {
+            targetPos = null;
+          } else {
+            const angle = Phaser.Math.Angle.Between(local.x, local.y, targetPos.x, targetPos.y);
+            dx = Math.cos(angle) * Math.min(moveStep, dist);
+            dy = Math.sin(angle) * Math.min(moveStep, dist);
+            if (Math.abs(dx) > Math.abs(dy)) {
+              dir = dx > 0 ? "right" : "left";
+            } else {
+              dir = dy > 0 ? "down" : "up";
+            }
+          }
+        }
+
+        // Predictive collision sliding: check X and Y separately
         if (dx !== 0) {
           const nextX = Phaser.Math.Clamp(local.x + dx, 40, 1490);
           if (!this.blocked(nextX, local.y)) {
             local.x = nextX;
+          } else {
+            targetPos = null;
           }
         }
         if (dy !== 0) {
           const nextY = Phaser.Math.Clamp(local.y + dy, 50, 970);
           if (!this.blocked(local.x, nextY)) {
             local.y = nextY;
+          } else {
+            targetPos = null;
           }
         }
 
@@ -548,10 +615,10 @@ export default function VirtualCampus({
           );
           safeSetPrompt(
             d
-              ? canEnter(d.team, role, teamSlug)
+              ? canEnter(d.team, propsRef.current.role, propsRef.current.teamSlug)
                 ? `E — Entrar em ${d.label}`
                 : `Missão exclusiva da Equipe ${d.team}`
-              : "Explore o Office · aproxime-se de uma porta ou pessoa"
+              : "Explore o Office · aproxime-se de uma porta ou pessoa · use WASD/Setas ou clique no mapa"
           );
         }
       }
@@ -574,7 +641,7 @@ export default function VirtualCampus({
       void network.leave();
       game.destroy(true);
     };
-  }, [displayName, role, teamSlug, userId]);
+  }, []); // Run ONCE on mount, props accessed via propsRef
 
   const key = (value: string) => window.dispatchEvent(new KeyboardEvent("keydown", { key: value }));
   const setJoystick = (event: React.PointerEvent<HTMLDivElement>) => {
