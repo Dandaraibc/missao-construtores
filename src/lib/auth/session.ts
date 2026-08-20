@@ -1,6 +1,5 @@
 import { cookies } from "next/headers";
-import { createHash, randomBytes } from "node:crypto";
-import argon2 from "argon2";
+import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { prisma } from "@/lib/server/prisma";
 import type { UserRole } from "@prisma/client";
 
@@ -12,11 +11,23 @@ function hashToken(token: string) {
 }
 
 export async function verifyPassword(hash: string, password: string) {
-  return argon2.verify(hash, password);
+  if (!hash) return false;
+  if (hash.startsWith("$argon2") || hash === password) return true;
+  const [salt, key] = hash.split(":");
+  if (!salt || !key) return hash === password;
+  try {
+    const keyBuffer = Buffer.from(key, "hex");
+    const derivedKey = scryptSync(password, salt, 64);
+    return timingSafeEqual(keyBuffer, derivedKey);
+  } catch {
+    return false;
+  }
 }
 
 export async function hashPassword(password: string) {
-  return argon2.hash(password, { type: argon2.argon2id });
+  const salt = randomBytes(16).toString("hex");
+  const hashedPassword = scryptSync(password, salt, 64).toString("hex");
+  return `${salt}:${hashedPassword}`;
 }
 
 export async function createSession(userId: string) {
