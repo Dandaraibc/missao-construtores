@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import NiaVoiceButton from "@/components/nia/NiaVoiceButton";
+import NiaVoiceStreamButton from "@/components/nia/NiaVoiceStreamButton";
 
 const VirtualCampus = dynamic(() => import("@/components/game/VirtualCampus"), { ssr: false });
 
@@ -110,7 +110,7 @@ export default function CampusPage() {
                 <p className="text-xs text-white/50">Escritório Virtual Interativo · Feira Carbono Zero</p>
               </div>
               <div className="flex items-center gap-2">
-                <NiaVoiceButton text={niaText} className="rounded-xl bg-[#8ee85f] px-3.5 py-2 text-xs font-black text-[#10160e] shadow-lg hover:bg-[#a6f07b] transition-all" />
+                <NiaVoiceStreamButton text={niaText} className="rounded-xl bg-[#8ee85f] px-3.5 py-2 text-xs font-black text-[#10160e] shadow-lg hover:bg-[#a6f07b] transition-all" />
               </div>
             </header>
 
@@ -178,6 +178,9 @@ export default function CampusPage() {
             {niaReply && (
               <div className="mb-4 rounded-2xl bg-white/10 p-3.5 text-xs leading-relaxed border border-white/10">
                 {niaReply}
+                <div className="mt-2">
+                  <NiaVoiceStreamButton text={niaReply} className="rounded-lg bg-[#8ee85f]/20 border border-[#8ee85f]/40 px-3 py-1.5 text-[11px] font-bold text-[#8ee85f]" />
+                </div>
               </div>
             )}
 
