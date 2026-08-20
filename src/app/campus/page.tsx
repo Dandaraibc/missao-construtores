@@ -3,30 +3,62 @@
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import NiaVoiceStreamButton from "@/components/nia/NiaVoiceStreamButton";
 
 const VirtualCampus = dynamic(() => import("@/components/game/VirtualCampus"), { ssr: false });
 
 export default function CampusPage() {
+  const router = useRouter();
   const [niaOpen, setNiaOpen] = useState(false);
   const [niaMessage, setNiaMessage] = useState("");
   const [niaReply, setNiaReply] = useState("");
   const [niaLoading, setNiaLoading] = useState(false);
 
   const [user, setUser] = useState<{ id: string; name: string; role: string; teamId?: string } | null>(null);
+  const [loadingUser, setLoadingUser] = useState(true);
 
   useEffect(() => {
-    const raw = localStorage.getItem("missao-user");
-    if (raw) {
-      setUser(JSON.parse(raw));
-    } else {
-      const avatarRaw = localStorage.getItem("missao-avatar");
-      if (avatarRaw) {
-        const parsed = JSON.parse(avatarRaw);
-        setUser({ id: "local-user", name: parsed.name || "Visitante", role: "STUDENT", teamId: parsed.teamSlug || "pesquisa" });
+    // 1. Tentar pegar o usuário pela sessão real no backend
+    fetch("/api/auth/me")
+      .then((res) => {
+        if (res.ok) return res.json();
+        throw new Error("Não autenticado");
+      })
+      .then((data) => {
+        if (data.user) {
+          setUser(data.user);
+        } else {
+          checkLocalFallback();
+        }
+      })
+      .catch(() => {
+        checkLocalFallback();
+      })
+      .finally(() => {
+        setLoadingUser(false);
+      });
+
+    function checkLocalFallback() {
+      // Fallback para visitante / dev local se permitido
+      const raw = localStorage.getItem("missao-user");
+      if (raw) {
+        setUser(JSON.parse(raw));
+      } else {
+        const avatarRaw = localStorage.getItem("missao-avatar");
+        if (avatarRaw) {
+          const parsed = JSON.parse(avatarRaw);
+          setUser({ id: "local-user", name: parsed.name || "Visitante", role: "STUDENT", teamId: parsed.teamSlug || "pesquisa" });
+        } else {
+          router.push("/");
+        }
       }
     }
-  }, []);
+  }, [router]);
+
+  if (loadingUser) {
+    return <div className="min-h-screen bg-[#080c12] flex items-center justify-center text-[#8ee85f] font-mono">Carregando HUD...</div>;
+  }
 
   const name = user?.name || "Visitante Feira";
   const role = (user?.role as "STUDENT" | "TEACHER" | "UBONGO_ADMIN" | "SUPER_ADMIN" | "VISITOR") || "STUDENT";
