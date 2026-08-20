@@ -43,10 +43,10 @@ const meetingSeats = [
   { x: 870, y: 420 },
 ];
 
-// Corrected NPC positions inside their respective rooms (not out in hallways)
+// Ubongo Admins: Matheus, Prietto, Dandara
 const npcList: (PlayerTarget & { x: number; y: number })[] = [
   { name: "NIA", role: "IA Ubongo", team: "ubongo", isNia: true, x: 650, y: 850 },
-  { name: "Charles", role: "Ubongo Admin", team: "ubongo", x: 1150, y: 560 },
+  { name: "Matheus", role: "Ubongo Admin", team: "ubongo", x: 1150, y: 560 },
   { name: "Prietto", role: "Ubongo Admin", team: "ubongo", x: 1240, y: 560 },
   { name: "Dandara", role: "Ubongo Admin", team: "ubongo", x: 1330, y: 560 },
   { name: "Prof. Niltes", role: "Professora", team: "professores", x: 790, y: 190 },
@@ -54,7 +54,7 @@ const npcList: (PlayerTarget & { x: number; y: number })[] = [
 ];
 
 const computerDesks = [
-  { x: 1150, y: 520, team: "ubongo", label: "Estação Ubongo Admin (Charles)" },
+  { x: 1150, y: 520, team: "ubongo", label: "Estação Ubongo Admin (Matheus)" },
   { x: 1240, y: 520, team: "ubongo", label: "Estação Ubongo Admin (Prietto)" },
   { x: 1330, y: 520, team: "ubongo", label: "Estação Ubongo Admin (Dandara)" },
   { x: 790, y: 160, team: "professores", label: "Estação Professores (Prof. Niltes)" },
@@ -519,7 +519,7 @@ export default function VirtualCampus({
 
       drawBongoRoom() {
         for (const [x, name, shirt, skin] of [
-          [1150, "Charles", 0x3d9b78, 0x6b422f],
+          [1150, "Matheus", 0x3d9b78, 0x6b422f],
           [1240, "Prietto", 0x6b5fc4, 0x8a5a3b],
           [1330, "Dandara", 0x8ee85f, 0x5a3829],
         ] as [number, string, number, number][]) {
@@ -549,7 +549,6 @@ export default function VirtualCampus({
           })
           .setDepth(4);
 
-        // Clickable Coffee Machine Trigger placed neatly in Cafeteria
         const coffeeBtn = this.add
           .text(1280, 120, "☕ CAFÉ DA UBONGO [ CLIQUE ]", {
             fontFamily: "monospace",
@@ -601,7 +600,7 @@ export default function VirtualCampus({
 
       drawOfflineStudents() {
         for (const [x, y, name] of [
-          [200, 850, "Matheus"],
+          [200, 850, "Lucas"],
           [300, 850, "Arthur"],
           [1380, 180, "Maria"],
         ] as [number, number, string][]) {
@@ -1034,7 +1033,7 @@ export default function VirtualCampus({
         </button>
       </div>
 
-      {/* PROXIMITY INTERACTION ACTION BANNER (Placed at top-4 cleanly) */}
+      {/* PROXIMITY INTERACTION ACTION BANNER */}
       {actionPrompt && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-4 rounded-2xl border-2 border-emerald-400 bg-[#0b0f17]/95 px-6 py-3 text-white shadow-[0_0_25px_rgba(16,185,129,0.3)] backdrop-blur-xl animate-bounce">
           <span className="font-extrabold text-sm text-emerald-300 tracking-wide">
