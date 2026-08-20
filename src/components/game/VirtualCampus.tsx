@@ -48,8 +48,8 @@ const npcList: (PlayerTarget & { x: number; y: number })[] = [
   { name: "Charles", role: "Ubongo Admin", team: "ubongo", x: 1075, y: 510 },
   { name: "Prietto", role: "Ubongo Admin", team: "ubongo", x: 1175, y: 510 },
   { name: "Dandara", role: "Ubongo Admin", team: "ubongo", x: 1275, y: 510 },
-  { name: "Prof. Niltes", role: "Professora", team: "professores", x: 790, y: 190 },
-  { name: "Prof. Diego", role: "Professor", team: "professores", x: 900, y: 190 },
+  { name: "Prof. Niltes", role: "Professora", team: "professores", x: 790, y: 160 },
+  { name: "Prof. Diego", role: "Professor", team: "professores", x: 900, y: 160 },
 ];
 
 const computerDesks = [
@@ -100,11 +100,11 @@ function avatar(
 
   let zzzText: Phaser.GameObjects.Text | null = null;
   if (isOffline) {
-    zzzText = scene.add.text(8, -26, "Zzz...", {
+    zzzText = scene.add.text(0, -48, "Zzz...", {
       fontFamily: "monospace",
       fontSize: "10px",
       color: "#93c5fd",
-    });
+    }).setOrigin(0.5);
   }
 
   const items: Phaser.GameObjects.GameObject[] = [
@@ -121,7 +121,7 @@ function avatar(
     scene.add.rectangle(4, -9, 2, 2, 0x182333),
     waves,
     scene
-      .add.text(0, -37, name + (isOffline ? " (Zzz)" : ""), {
+      .add.text(0, -32, name + (isOffline ? " (Zzz)" : ""), {
         fontFamily: "monospace",
         fontSize: "11px",
         color: isOffline ? "#64748b" : "#182333",
@@ -174,13 +174,12 @@ export default function VirtualCampus({
   const [showRpgMission, setShowRpgMission] = useState(false);
   const [hasCoffeeEffect, setHasCoffeeEffect] = useState(false);
 
-  // 1. Microphone States & Controls (MIC_MUTED, MIC_ON, MIC_DENIED, MIC_UNAVAILABLE)
+  // Microphone & Audio Controls
   const [micState, setMicState] = useState<MicState>("MIC_MUTED");
-  // 2. Audio States & Controls (AUDIO_ON, AUDIO_MUTED)
   const [audioState, setAudioState] = useState<AudioState>("AUDIO_ON");
   const [isSpeaking, setIsSpeaking] = useState(false);
 
-  // 3. Chat Contextual States & Unread Badges
+  // Chat Contextual States
   const [chatOpen, setChatOpen] = useState(false);
   const [chatTab, setChatTab] = useState<"area" | "team" | "meeting">("area");
   const [chatText, setChatText] = useState("");
@@ -189,7 +188,7 @@ export default function VirtualCampus({
     typeof window === "undefined" ? [] : getChat("area").slice(-30)
   );
 
-  // 4. Player Proximity & Interaction Modal
+  // Player Proximity & Interaction Modal
   const [nearbyTarget, setNearbyTarget] = useState<PlayerTarget | null>(null);
   const [interactionModal, setInteractionModal] = useState<PlayerTarget | null>(null);
 
@@ -209,7 +208,6 @@ export default function VirtualCampus({
     }
   };
 
-  // Real-time Chat Sync & Unread Badge Counter
   useEffect(() => {
     const handleNewMessage = (e: Event) => {
       const customEvent = e as CustomEvent<ChatMessage>;
@@ -305,7 +303,7 @@ export default function VirtualCampus({
       const error = err as { name?: string };
       if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
         setMicState("MIC_DENIED");
-        safeSetPrompt("Permissão de microfone negada no navegador. Clique novamente para autorizar.");
+        safeSetPrompt("Permissão de microfone negada no navegador.");
       } else {
         setMicState("MIC_UNAVAILABLE");
         safeSetPrompt("Nenhum dispositivo de microfone encontrado.");
@@ -349,6 +347,13 @@ export default function VirtualCampus({
       }
 
       create() {
+        this.cameras.main.setBounds(0, 0, 1536, 1024);
+        this.cameras.main.setZoom(1.0);
+        this.cameras.main.setBackgroundColor("#0b0f17");
+
+        const bg = this.add.image(768, 512, "office-art").setDepth(-10);
+        bg.setDisplaySize(1536, 1024);
+
         this.drawBongoRoom();
         this.drawTeachersRoom();
         this.drawCafeteria();
@@ -356,7 +361,6 @@ export default function VirtualCampus({
         this.drawOfflineStudents();
 
         this.time.delayedCall(120, () => {
-          this.cameras.main.setZoom(1.2);
           this.ball?.setVisible(true).setScale(1.2);
         });
 
@@ -371,17 +375,12 @@ export default function VirtualCampus({
         });
 
         this.nia = avatar(this, 650, 850, 0x8ee85f, "NIA", 0x5a3829);
-        this.nia.setDepth(8);
-
-        this.cameras.main.setBounds(0, 0, 1536, 1024);
-        this.cameras.main.setZoom(0.9);
-        this.cameras.main.setBackgroundColor("#172b42");
-        this.add.image(768, 512, "office-art").setDepth(-10);
+        this.nia.setDepth(850);
 
         this.add
           .text(110, 35, "DESCOBERTAS", {
             fontFamily: "monospace",
-            fontSize: "16px",
+            fontSize: "14px",
             color: "#fff8df",
             backgroundColor: "#6d4b94",
             padding: { x: 7, y: 4 },
@@ -390,7 +389,7 @@ export default function VirtualCampus({
         this.add
           .text(360, 35, "IDEIAS", {
             fontFamily: "monospace",
-            fontSize: "16px",
+            fontSize: "14px",
             color: "#fff8df",
             backgroundColor: "#3d708d",
             padding: { x: 7, y: 4 },
@@ -399,7 +398,7 @@ export default function VirtualCampus({
         this.add
           .text(610, 35, "CRIATIVA", {
             fontFamily: "monospace",
-            fontSize: "16px",
+            fontSize: "14px",
             color: "#fff8df",
             backgroundColor: "#6d4b94",
             padding: { x: 7, y: 4 },
@@ -408,7 +407,7 @@ export default function VirtualCampus({
         this.add
           .text(1000, 35, "GUARDIÕES", {
             fontFamily: "monospace",
-            fontSize: "16px",
+            fontSize: "14px",
             color: "#fff8df",
             backgroundColor: "#3d708d",
             padding: { x: 7, y: 4 },
@@ -417,7 +416,7 @@ export default function VirtualCampus({
         this.add
           .text(580, 390, "SALA CENTRAL · 22 LUGARES", {
             fontFamily: "monospace",
-            fontSize: "15px",
+            fontSize: "14px",
             color: "#e9fff1",
             backgroundColor: "#315f4c",
             padding: { x: 7, y: 4 },
@@ -427,11 +426,12 @@ export default function VirtualCampus({
         this.ball = this.add
           .circle(320, 560, 7, 0xffffff)
           .setStrokeStyle(2, 0x23302f)
-          .setDepth(3)
+          .setDepth(560)
           .setVisible(false);
 
         local = avatar(this, 760, 520, 0xf26b5b, propsRef.current.displayName);
-        this.cameras.main.startFollow(local, true, 0.1, 0.1);
+        local.setDepth(520);
+        this.cameras.main.startFollow(local, true, 0.15, 0.15);
 
         this.cursors = this.input.keyboard!.createCursorKeys();
         this.keys = this.input.keyboard!.addKeys("W,A,S,D,E") as Record<
@@ -489,10 +489,12 @@ export default function VirtualCampus({
                 p.teamSlug === "design" ? 0x7c6bf2 : 0x4bb3a7,
                 p.displayName
               );
+              r.setDepth(p.y);
               remotes.set(id, r);
               p.onChange?.(() => {
                 r.x = p.x;
                 r.y = p.y;
+                r.setDepth(p.y);
               });
             });
             state.players.onRemove((_p, id) => {
@@ -502,21 +504,20 @@ export default function VirtualCampus({
             });
           })
           .catch(() =>
-            safeSetPrompt("Modo local · inicie o servidor multiplayer para ver outras pessoas")
+            safeSetPrompt("Modo local · navegação fluida ativada")
           );
       }
 
       desk(x: number, y: number) {
-        this.add.rectangle(x, y, 72, 32, 0xc88b5f).setStrokeStyle(3, 0x754c3b);
-        this.add.rectangle(x, y - 25, 38, 20, 0x516a79).setStrokeStyle(3, 0x243943);
-        this.add.rectangle(x, y + 25, 22, 18, 0x33424c);
+        this.add.rectangle(x, y, 72, 32, 0xc88b5f).setStrokeStyle(3, 0x754c3b).setDepth(y);
+        this.add.rectangle(x, y - 25, 38, 20, 0x516a79).setStrokeStyle(3, 0x243943).setDepth(y);
+        this.add.rectangle(x, y + 25, 22, 18, 0x33424c).setDepth(y);
       }
 
       xpComputer(x: number, y: number) {
-        this.add.rectangle(x, y, 44, 28, 0x27333c).setStrokeStyle(3, 0x111a20);
-        this.add.rectangle(x, y, 34, 19, 0x8db6c5).setStrokeStyle(2, 0x4d6972);
-        this.add.rectangle(x, y + 24, 12, 4, 0x4b5961);
-        this.add.rectangle(x + 25, y + 8, 8, 12, 0x65757d);
+        this.add.rectangle(x, y, 44, 28, 0x27333c).setStrokeStyle(3, 0x111a20).setDepth(y);
+        this.add.rectangle(x, y, 34, 19, 0x8db6c5).setStrokeStyle(2, 0x4d6972).setDepth(y);
+        this.add.rectangle(x + 25, y + 8, 8, 12, 0x65757d).setDepth(y);
       }
 
       drawBongoRoom() {
@@ -528,7 +529,7 @@ export default function VirtualCampus({
           this.desk(x, 470);
           this.xpComputer(x, 447);
           const member = avatar(this, x, 510, shirt, name, skin);
-          member.setDepth(5);
+          member.setDepth(510);
         }
       }
 
@@ -539,8 +540,8 @@ export default function VirtualCampus({
         ] as [number, string, number, number][]) {
           this.desk(x, 150);
           this.xpComputer(x, 128);
-          const teacher = avatar(this, x, 190, shirt, name, skin);
-          teacher.setDepth(5);
+          const teacher = avatar(this, x, 160, shirt, name, skin);
+          teacher.setDepth(160);
         }
       }
 
@@ -548,27 +549,28 @@ export default function VirtualCampus({
         this.add
           .text(1250, 65, "CANTINA / LANCHONETE", {
             fontFamily: "monospace",
-            fontSize: "14px",
+            fontSize: "13px",
             color: "#fff8df",
             backgroundColor: "#8a603e",
             padding: { x: 8, y: 4 },
           })
           .setDepth(4);
-        this.add.rectangle(1330, 180, 170, 38, 0xc88b5f).setStrokeStyle(3, 0x754c3b);
-        this.add.rectangle(1270, 180, 28, 22, 0x394852);
-        this.add.circle(1400, 180, 13, 0x4b8fd3);
+        this.add.rectangle(1330, 180, 170, 38, 0xc88b5f).setStrokeStyle(3, 0x754c3b).setDepth(180);
+        this.add.rectangle(1270, 180, 28, 22, 0x394852).setDepth(180);
+        this.add.circle(1400, 180, 13, 0x4b8fd3).setDepth(180);
         this.add
           .text(1330, 230, "☕ CAFÉ DA UBONGO", {
             fontFamily: "monospace",
             fontSize: "11px",
-            color: "#754c3b",
+            color: "#8ee85f",
           })
-          .setOrigin(0.5);
+          .setOrigin(0.5)
+          .setDepth(230);
       }
 
       drawPingPongTable() {
-        this.add.rectangle(1330, 800, 110, 65, 0x2e6f40).setStrokeStyle(3, 0x1a4526).setDepth(2);
-        this.add.rectangle(1330, 800, 4, 65, 0xffffff).setDepth(3);
+        this.add.rectangle(1330, 800, 110, 65, 0x2e6f40).setStrokeStyle(3, 0x1a4526).setDepth(800);
+        this.add.rectangle(1330, 800, 4, 65, 0xffffff).setDepth(801);
         this.add
           .text(1330, 755, "🏓 PING-PONG 2D", {
             fontFamily: "monospace",
@@ -578,41 +580,38 @@ export default function VirtualCampus({
             padding: { x: 4, y: 2 },
           })
           .setOrigin(0.5)
-          .setDepth(4);
+          .setDepth(802);
       }
 
       drawOfflineStudents() {
+        // Position offline students cleanly in lounge sofas so doorways remain 100% open
         for (const [x, y, name] of [
-          [200, 220, "Matheus"],
-          [450, 220, "Arthur"],
-          [850, 220, "Maria"],
+          [200, 850, "Matheus"],
+          [300, 850, "Arthur"],
+          [1380, 280, "Maria"],
         ] as [number, number, string][]) {
           const off = avatar(this, x, y, 0x4b729f, name, 0xf0b38c, true);
-          off.setDepth(4);
+          off.setDepth(y);
         }
       }
 
+      // Smooth Collision Check - Tight 5px Radius & Fully Open Doorways
       blocked(x: number, y: number) {
-        const r = 10;
-        const walls = [
-          [0, 0, 1536, 16],
-          [0, 1008, 1536, 16],
-          [0, 0, 16, 1024],
-          [1520, 0, 16, 1024],
-          [0, 320, 650, 18],
-          [900, 320, 636, 18],
-          [0, 640, 380, 18],
-          [1120, 640, 416, 18],
-          [300, 0, 18, 300],
-          [700, 0, 18, 300],
-          [1000, 0, 18, 300],
-          [300, 340, 18, 300],
-          [900, 340, 18, 300],
-          [1000, 340, 18, 300],
-          [400, 650, 18, 374],
-          [850, 650, 18, 374],
+        const r = 5;
+        // Outer boundaries of the office map
+        if (x - r < 35 || x + r > 1500 || y - r < 40 || y + r > 980) {
+          return true;
+        }
+
+        // Only block actual desk bases (leaving all room doorways open)
+        const furnitureBoxes = [
+          [1030, 450, 280, 40], // Ubongo admin desks
+          [740, 130, 200, 40],  // Teacher desks
+          [1240, 160, 180, 30], // Cafeteria counter
+          [1275, 765, 120, 60], // Ping pong table
         ];
-        return walls.some(
+
+        return furnitureBoxes.some(
           ([wx, wy, ww, wh]) => x + r > wx && x - r < wx + ww && y + r > wy && y - r < wy + wh
         );
       }
@@ -629,21 +628,21 @@ export default function VirtualCampus({
         }
 
         // Check Coffee Counter
-        if (Phaser.Math.Distance.Between(local.x, local.y, 1330, 180) < 70) {
+        if (Phaser.Math.Distance.Between(local.x, local.y, 1330, 180) < 85) {
           setHasCoffeeEffect(true);
           safeSetPrompt("☕ Efeito Café ativado! Sua velocidade aumentou temporariamente.");
           return;
         }
 
         // Check Ping Pong Table
-        if (Phaser.Math.Distance.Between(local.x, local.y, 1330, 800) < 80) {
+        if (Phaser.Math.Distance.Between(local.x, local.y, 1330, 800) < 90) {
           setShowPingPong(true);
           return;
         }
 
         // Check Computer Desks
         const desk = computerDesks.find(
-          (d) => Phaser.Math.Distance.Between(local!.x, local!.y, d.x, d.y) < 65
+          (d) => Phaser.Math.Distance.Between(local!.x, local!.y, d.x, d.y) < 80
         );
         if (desk) {
           setShowRpgMission(true);
@@ -651,14 +650,14 @@ export default function VirtualCampus({
         }
 
         // Check Meeting Table
-        if (Phaser.Math.Distance.Between(local.x, local.y, 650, 420) < 110) {
+        if (Phaser.Math.Distance.Between(local.x, local.y, 650, 420) < 130) {
           setShowMeetingModal(true);
           return;
         }
 
         // Check NPCs
         const targetNpc = npcList.find(
-          (npc) => Phaser.Math.Distance.Between(local!.x, local!.y, npc.x, npc.y) < 80
+          (npc) => Phaser.Math.Distance.Between(local!.x, local!.y, npc.x, npc.y) < 90
         );
         if (targetNpc) {
           if (targetNpc.isNia) {
@@ -670,7 +669,7 @@ export default function VirtualCampus({
         }
 
         const seat = meetingSeats.find(
-          (item) => Phaser.Math.Distance.Between(local!.x, local!.y, item.x, item.y) < 44
+          (item) => Phaser.Math.Distance.Between(local!.x, local!.y, item.x, item.y) < 50
         );
         if (seat) {
           seated = true;
@@ -681,7 +680,7 @@ export default function VirtualCampus({
         }
 
         const d = doors.find(
-          (v) => Phaser.Math.Distance.Between(local!.x, local!.y, v.x, v.y) < 115
+          (v) => Phaser.Math.Distance.Between(local!.x, local!.y, v.x, v.y) < 130
         );
         if (d)
           safeSetPrompt(
@@ -707,8 +706,9 @@ export default function VirtualCampus({
           return;
         }
 
+        // Auto-Unstuck safety check
         if (this.blocked(local.x, local.y)) {
-          for (let offset = 2; offset <= 30; offset += 2) {
+          for (let offset = 4; offset <= 40; offset += 4) {
             if (!this.blocked(local.x, local.y + offset)) {
               local.y += offset;
               break;
@@ -733,7 +733,7 @@ export default function VirtualCampus({
         let dir = "down";
 
         const speedMult = hasCoffeeEffect ? 1.4 : 1.0;
-        const moveStep = (260 * speedMult * delta) / 1000;
+        const moveStep = (320 * speedMult * delta) / 1000;
         const j = joystickRef.current;
         let dx = 0;
         let dy = 0;
@@ -759,9 +759,10 @@ export default function VirtualCampus({
           targetPos = null;
         }
 
+        // Point and Click Navigation
         if (dx === 0 && dy === 0 && targetPos) {
           const dist = Phaser.Math.Distance.Between(local.x, local.y, targetPos.x, targetPos.y);
-          if (dist < 6) {
+          if (dist < 8) {
             targetPos = null;
           } else {
             const angle = Phaser.Math.Angle.Between(local.x, local.y, targetPos.x, targetPos.y);
@@ -775,22 +776,22 @@ export default function VirtualCampus({
           }
         }
 
+        // TRUE WALL-SLIDING MOVEMENT (Independently check X and Y)
         if (dx !== 0) {
           const nextX = Phaser.Math.Clamp(local.x + dx, 40, 1490);
           if (!this.blocked(nextX, local.y)) {
             local.x = nextX;
-          } else {
-            targetPos = null;
           }
         }
         if (dy !== 0) {
           const nextY = Phaser.Math.Clamp(local.y + dy, 50, 970);
           if (!this.blocked(local.x, nextY)) {
             local.y = nextY;
-          } else {
-            targetPos = null;
           }
         }
+
+        // Update depth sorting dynamically for smooth 2.5D rendering
+        local.setDepth(local.y);
 
         if ((local.x !== ox || local.y !== oy) && time - lastMoveTime > 40) {
           lastMoveTime = time;
@@ -833,7 +834,7 @@ export default function VirtualCampus({
               this.ball.y = 560;
             }
           }
-          if (Phaser.Math.Distance.Between(local.x, local.y, this.ball.x, this.ball.y) < 28) {
+          if (Phaser.Math.Distance.Between(local.x, local.y, this.ball.x, this.ball.y) < 32) {
             this.ballVelocity = local.x < this.ball.x ? 4 : -4;
             this.ballVertical = local.y < this.ball.y ? 2 : -2;
             safeSetPrompt("⚽ Você chutou a bola no campo de futebol 2D!");
@@ -841,31 +842,31 @@ export default function VirtualCampus({
         }
 
         // Interactivity Prompts
-        if (Phaser.Math.Distance.Between(local.x, local.y, 1330, 180) < 70) {
+        if (Phaser.Math.Distance.Between(local.x, local.y, 1330, 180) < 85) {
           safeSetPrompt("E — TOMAR CAFÉ DA UBONGO (Bônus de Velocidade)");
           return;
         }
 
-        if (Phaser.Math.Distance.Between(local.x, local.y, 1330, 800) < 80) {
+        if (Phaser.Math.Distance.Between(local.x, local.y, 1330, 800) < 90) {
           safeSetPrompt("E — JOGAR PING-PONG 2D");
           return;
         }
 
         const desk = computerDesks.find(
-          (d) => Phaser.Math.Distance.Between(local!.x, local!.y, d.x, d.y) < 65
+          (d) => Phaser.Math.Distance.Between(local!.x, local!.y, d.x, d.y) < 80
         );
         if (desk) {
           safeSetPrompt(`E — USAR COMPUTADOR (${desk.label})`);
           return;
         }
 
-        if (Phaser.Math.Distance.Between(local.x, local.y, 650, 420) < 110) {
+        if (Phaser.Math.Distance.Between(local.x, local.y, 650, 420) < 130) {
           safeSetPrompt("E — ENTRAR NA REUNIÃO CENTRAL / LINK EXTERNO");
           return;
         }
 
         const targetNpc = npcList.find(
-          (npc) => Phaser.Math.Distance.Between(local!.x, local!.y, npc.x, npc.y) < 80
+          (npc) => Phaser.Math.Distance.Between(local!.x, local!.y, npc.x, npc.y) < 90
         );
         if (targetNpc) {
           setNearbyTarget(targetNpc);
@@ -873,20 +874,20 @@ export default function VirtualCampus({
         } else {
           setNearbyTarget(null);
           const nearbySeat = meetingSeats.find(
-            (item) => Phaser.Math.Distance.Between(local!.x, local!.y, item.x, item.y) < 44
+            (item) => Phaser.Math.Distance.Between(local!.x, local!.y, item.x, item.y) < 50
           );
           if (nearbySeat) {
             safeSetPrompt("E — Sentar");
           } else {
             const d = doors.find(
-              (v) => Phaser.Math.Distance.Between(local!.x, local!.y, v.x, v.y) < 115
+              (v) => Phaser.Math.Distance.Between(local!.x, local!.y, v.x, v.y) < 130
             );
             safeSetPrompt(
               d
                 ? d.team === null || d.team === propsRef.current.teamSlug || propsRef.current.role !== "STUDENT"
                   ? `E — Entrar em ${d.label}`
                   : `Missão exclusiva da Equipe ${d.team}`
-                : "Explore o Office · aproximar para interagir · WASD/Setas ou toque"
+                : "Explore o Office · caminhada fluida liberada · WASD/Setas ou toque"
             );
           }
         }
@@ -898,9 +899,9 @@ export default function VirtualCampus({
       width: "100%",
       height: "100%",
       parent: mountRef.current,
-      pixelArt: true,
+      pixelArt: false,
       audio: { noAudio: true },
-      render: { antialias: false },
+      render: { antialias: true, roundPixels: true },
       scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH },
       scene: OfficeScene,
     });
@@ -926,7 +927,7 @@ export default function VirtualCampus({
   };
 
   return (
-    <div className="relative h-full min-h-[560px] w-full overflow-hidden rounded-2xl border-4 border-[#315f4c] bg-[#92cba8]">
+    <div className="relative h-full min-h-[560px] w-full overflow-hidden rounded-2xl border-4 border-[#315f4c] bg-[#0b0f17]">
       <div ref={mountRef} className="absolute inset-0" />
 
       {/* PERMANENT SOCIAL HUD (Desktop & Mobile - Bottom Right position) */}
@@ -1178,11 +1179,11 @@ export default function VirtualCampus({
               value={chatText}
               onChange={(e) => setChatText(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-              className="flex-1 rounded-xl border border-white/20 bg-black/40 px-3 py-2 text-xs text-white placeholder-white/40 focus:border-purple-400 focus:outline-none"
+              className="flex-1 rounded-xl border border-[#10b981]/30 bg-black/40 px-3 py-2 text-xs text-white placeholder-white/40 focus:border-[#10b981] focus:outline-none"
             />
             <button
               onClick={sendMessage}
-              className="rounded-xl bg-purple-600 px-3.5 py-2 font-bold text-white hover:bg-purple-500 active:scale-95 transition-all"
+              className="rounded-xl bg-[#10b981] px-3.5 py-2 font-bold text-black hover:bg-[#34d399] active:scale-95 transition-all"
             >
               Enviar
             </button>
