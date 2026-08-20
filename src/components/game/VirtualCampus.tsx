@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import * as Phaser from "phaser";
 import { MultiplayerClient } from "@/game/network/MultiplayerClient";
-import { getChat, sendChatMessage } from "@/lib/rooms";
 import { ChatMessage } from "@/types/room";
 import PingPongModal from "./PingPongModal";
 import MeetingModal from "./MeetingModal";
@@ -193,9 +192,7 @@ export default function VirtualCampus({
   const [chatTab, setChatTab] = useState<"area" | "team" | "meeting">("area");
   const [chatText, setChatText] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() =>
-    typeof window === "undefined" ? [] : getChat("area").slice(-30)
-  );
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
 
   const [interactionModal, setInteractionModal] = useState<PlayerTarget | null>(null);
 
@@ -249,7 +246,10 @@ export default function VirtualCampus({
         chatTab === "area" ? "area" : chatTab === "team" ? `team-${teamSlug}` : "meeting";
 
       if (msg.roomId === currentRoomId) {
-        setChatMessages(getChat(currentRoomId).slice(-30));
+        setChatMessages((prev) => {
+          if (prev.find(m => m.id === msg.id)) return prev;
+          return [...prev, msg].slice(-100);
+        });
       }
       if (!chatOpen) {
         setUnreadCount((prev) => prev + 1);
@@ -263,7 +263,9 @@ export default function VirtualCampus({
   useEffect(() => {
     const roomId =
       chatTab === "area" ? "area" : chatTab === "team" ? `team-${teamSlug}` : "meeting";
-    setChatMessages(getChat(roomId).slice(-30));
+    import("@/lib/rooms").then(({ fetchChatHistory }) => {
+      fetchChatHistory(roomId).then(setChatMessages);
+    });
   }, [chatTab, teamSlug]);
 
   const toggleChatPanel = () => {
@@ -277,7 +279,9 @@ export default function VirtualCampus({
     if (!chatText.trim()) return;
     const roomId =
       chatTab === "area" ? "area" : chatTab === "team" ? `team-${teamSlug}` : "meeting";
-    sendChatMessage(roomId, userId, displayName, chatText.trim());
+    import("@/lib/rooms").then(({ sendChatMessage }) => {
+      sendChatMessage(roomId, userId || "visitante", displayName || "Visitante", chatText.trim());
+    });
     setChatText("");
   };
 

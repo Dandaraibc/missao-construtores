@@ -52,14 +52,18 @@ export function getChat(roomId: string): ChatMessage[] {
   }
 }
 
-export function sendChatMessage(
+export function fetchChatHistory(roomId: string): Promise<ChatMessage[]> {
+  return fetch(`/api/chat?channel=${roomId}`)
+    .then((res) => res.json())
+    .then((data) => data.success ? data.data : []);
+}
+
+export async function sendChatMessage(
   roomId: string,
   studentId: string,
   name: string,
   text: string
-): ChatMessage {
-  const raw = localStorage.getItem(CHAT_KEY);
-  const all: ChatMessage[] = raw ? JSON.parse(raw) : [];
+): Promise<ChatMessage> {
   const msg: ChatMessage = {
     id: crypto.randomUUID(),
     roomId,
@@ -68,12 +72,23 @@ export function sendChatMessage(
     text: text.trim(),
     createdAt: new Date().toISOString(),
   };
-  all.push(msg);
-  const trimmed = all.slice(-500);
-  localStorage.setItem(CHAT_KEY, JSON.stringify(trimmed));
+
+  // 1. Instant optimistic UI update
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent("new_chat_message", { detail: msg }));
   }
+
+  // 2. Persist to Postgres API
+  try {
+    await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ channel: roomId, text: text.trim() }),
+    });
+  } catch (e) {
+    console.error("Erro ao enviar mensagem", e);
+  }
+
   return msg;
 }
 
